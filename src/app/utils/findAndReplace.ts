@@ -19,7 +19,8 @@ export const findAndReplace = <ReplaceReturnType, ConvertReturnType>(
     result.push(replace(match, result.length));
 
     lastEnd = match.index + match[0].length;
-    if (regex.global) match = regex.exec(text);
+    if (!regex.global) break;
+    match = regex.exec(text);
   }
 
   result.push(convertPart(text.slice(lastEnd), result.length));

@@ -18,13 +18,21 @@ npm run check:eslint    # eslint src/* only
 npm run check:prettier  # prettier --check .
 npm run fix:prettier    # prettier --write .
 npm run typecheck       # tsc --noEmit
+npm test                # vitest run (single run, CI mode)
+npm run test:watch      # vitest (watch mode)
 ```
 
-There is no test suite/runner configured in this repo.
-
-The pre-commit hook (`.husky/pre-commit`) that would run typecheck/lint-staged is currently commented out, so `npm run lint` and `npm run typecheck` must be run manually before considering a change complete.
+The pre-commit hook (`.husky/pre-commit`) that would run typecheck/lint-staged is currently commented out, so `npm run lint`, `npm run typecheck`, and `npm test` must be run manually before considering a change complete.
 
 Node version: use the version pinned in `.node-version` (managed via nvm/similar).
+
+## Testing
+
+Tests run on [Vitest](https://vitest.dev) (`vitest.config.ts`), configured with `environment: 'node'` — there is no DOM/browser environment (no jsdom), so tests exercise pure logic rather than rendering React components.
+
+- Test files are co-located next to the code they cover, named `*.test.ts`, `*.test.tsx`, or `*.test.js` (matched by `vitest.config.ts`'s `include` pattern `src/**/*.test.{ts,tsx,js}`).
+- Existing coverage focuses on pure/standalone logic: `src/util/`, `src/app/utils/`, state helpers under `src/app/state/`, and login/redirect flow utilities under `src/app/pages/`. Follow this pattern — prefer extracting logic into a testable pure function over trying to test components/hooks that need a DOM or a live `MatrixClient`.
+- When adding or changing pure-logic utilities, add or update a co-located `*.test.ts` file. Run `npm test` before considering the change complete; use `npm run test:watch` while iterating.
 
 ## Architecture
 
