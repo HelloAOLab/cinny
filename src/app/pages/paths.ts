@@ -35,6 +35,7 @@ export type _SearchPathSearchParams = {
   senders?: string;
 };
 export const _SEARCH_PATH = 'search/';
+export const _FEED_PATH = 'feed/';
 
 export type _RoomSearchParams = {
   /* comma separated string of servers */
@@ -46,6 +47,7 @@ export const HOME_PATH = '/home/';
 export const HOME_CREATE_PATH = `/home/${_CREATE_PATH}`;
 export const HOME_JOIN_PATH = `/home/${_JOIN_PATH}`;
 export const HOME_SEARCH_PATH = `/home/${_SEARCH_PATH}`;
+export const HOME_FEED_PATH = `/home/${_FEED_PATH}`;
 export const HOME_ROOM_PATH = `/home/${_ROOM_PATH}`;
 
 export const DIRECT_PATH = '/direct/';
