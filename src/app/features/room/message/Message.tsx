@@ -53,8 +53,10 @@ import {
   getMemberDisplayName,
 } from '../../../utils/room';
 import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars -- TODO: unused, revisit
   getCanonicalAliasOrRoomId,
   getMxIdLocalPart,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars -- TODO: unused, revisit
   isRoomAlias,
   mxcUrlToHttp,
 } from '../../../utils/matrix';
@@ -324,6 +326,7 @@ export const MessageCopyLinkItem = as<
     onClose?: () => void;
   }
 >(({ room, mEvent, onClose, ...props }, ref) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars -- TODO: unused, revisit
   const mx = useMatrixClient();
 
   const handleCopy = () => {

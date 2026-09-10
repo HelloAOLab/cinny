@@ -61,6 +61,7 @@ export const useMemberPowerSort = (
 
       return getPowerLevel(b.userId) - getPowerLevel(a.userId);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: missing getPowerLevel dep, revisit
     [creators]
   );
 

@@ -1,4 +1,5 @@
 // https://github.com/matrix-org/matrix-react-sdk/blob/e78a1adb6f1af2ea425b0bae9034fb7344a4b2e8/src/utils/MegolmExportEncryption.js
+/* eslint-disable no-bitwise, no-plusplus, no-param-reassign, prefer-template -- ported bit-twiddling code, TODO: revisit */
 
 const subtleCrypto = window.crypto.subtle || window.crypto.webkitSubtle;
 
