@@ -105,7 +105,15 @@ export default defineConfig({
       injectRegister: false,
       manifest: false,
       injectManifest: {
-        injectionPoint: undefined,
+        // Precache the app shell only (JS/CSS/HTML); skip the wasm binaries (matrix
+        // crypto engine) since they're large and can be fetched lazily as needed.
+        globPatterns: ['**/*.{js,css,html}'],
+        // The embedded call widget is a separate, iframed third-party app copied
+        // into the build output; it isn't part of our app shell and shouldn't be
+        // precached (its own bundle is multiple megabytes).
+        globIgnores: ['**/element-call/**'],
+        // Our main bundle is a few megabytes, above workbox's default 2 MiB cap.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       devOptions: {
         enabled: true,
