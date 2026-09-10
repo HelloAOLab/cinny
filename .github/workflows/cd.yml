@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      statuses: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -27,11 +28,37 @@ jobs:
           NODE_OPTIONS: '--max_old_space_size=4096'
         run: npm run build
       - name: Deploy to Cloudflare Workers
+        id: deploy
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+      - name: Post commit status
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment-url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$DEPLOY_OUTCOME" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="Deployed to Cloudflare Workers"
+          else
+            STATE="failure"
+            DESCRIPTION="Cloudflare Workers deployment failed"
+          fi
+          PAYLOAD=$(jq -n \
+            --arg state "$STATE" \
+            --arg target_url "$DEPLOY_URL" \
+            --arg description "$DESCRIPTION" \
+            --arg context "cloudflare-workers/production" \
+            '{state: $state, target_url: $target_url, description: $description, context: $context}')
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d "$PAYLOAD"
 
   preview:
     name: Deploy preview to Cloudflare Workers
