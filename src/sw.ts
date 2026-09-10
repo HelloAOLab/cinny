@@ -1,7 +1,29 @@
 /// <reference lib="WebWorker" />
 
+import {
+  cleanupOutdatedCaches,
+  createHandlerBoundToURL,
+  precacheAndRoute,
+} from 'workbox-precaching';
+import { NavigationRoute, registerRoute } from 'workbox-routing';
+
 export type {};
-declare const self: ServiceWorkerGlobalScope;
+declare const self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: Array<string | { url: string; revision: string | null }>;
+};
+
+// Precache the app shell (JS/CSS/HTML build output) so it can load offline.
+precacheAndRoute(self.__WB_MANIFEST);
+cleanupOutdatedCaches();
+
+// Serve the cached app shell for client-side-routed navigations (e.g. "/room/xyz")
+// so deep links work offline, without hijacking same-origin iframes like the
+// embedded call widget.
+registerRoute(
+  new NavigationRoute(createHandlerBoundToURL('index.html'), {
+    denylist: [/\/element-call\//, /^\/_matrix\//],
+  })
+);
 
 type SessionInfo = {
   accessToken: string;
