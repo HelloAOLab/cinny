@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { Opts as LinkifyOpts } from 'linkifyjs';
 import { HTMLReactParserOptions } from 'html-react-parser';
-import { Box, Text, config } from 'folds';
+import { Avatar, Box, Icon, Icons, Text, config } from 'folds';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useMentionClickHandler } from '../../hooks/useMentionClickHandler';
@@ -14,13 +14,21 @@ import {
   makeMentionCustomProps,
   renderMatrixMention,
 } from '../../plugins/react-custom-html-parser';
-import { getMemberDisplayName } from '../../utils/room';
-import { getMxIdLocalPart } from '../../utils/matrix';
+import { getMemberAvatarMxc, getMemberDisplayName } from '../../utils/room';
+import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
-import { ImageContent, MImage, MText, RenderBody } from '../../components/message';
+import {
+  ImageContent,
+  MImage,
+  MText,
+  RenderBody,
+  Username,
+  UsernameBold,
+} from '../../components/message';
 import { Image } from '../../components/media';
 import { ImageViewer } from '../../components/image-viewer';
 import { SequenceCard } from '../../components/sequence-card';
+import { UserAvatar } from '../../components/user-avatar';
 import { GetContentCallback } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
 
@@ -45,6 +53,10 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
     (senderId && getMxIdLocalPart(senderId)) ??
     senderId ??
     '';
+  const senderAvatarMxc = senderId ? getMemberAvatarMxc(room, senderId) : undefined;
+  const senderAvatarUrl = senderAvatarMxc
+    ? mxcUrlToHttp(mx, senderAvatarMxc, useAuthentication, 48, 48, 'crop') ?? undefined
+    : undefined;
 
   const getContent = useCallback(() => content, [content]) as GetContentCallback;
 
@@ -84,6 +96,9 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
       gap="300"
       style={{ padding: config.space.S400 }}
     >
+      <Text as="h4" size="H4" truncate>
+        {room.name}
+      </Text>
       {isImagePost && (
         <MImage
           content={content as IImageContent}
@@ -97,9 +112,21 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
           )}
         />
       )}
-      <Text as="h4" size="H4" truncate>
-        {room.name}
-      </Text>
+      <Box alignItems="Center" gap="200">
+        <Avatar size="300">
+          <UserAvatar
+            userId={senderId ?? ''}
+            src={senderAvatarUrl}
+            alt={displayName}
+            renderFallback={() => <Icon size="200" src={Icons.User} filled />}
+          />
+        </Avatar>
+        <Username>
+          <Text as="span" truncate>
+            <UsernameBold>{displayName}</UsernameBold>
+          </Text>
+        </Username>
+      </Box>
       {isImagePost ? (
         showImageCaption && (
           <MText
