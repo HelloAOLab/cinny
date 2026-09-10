@@ -3,11 +3,12 @@ name: CD
 on:
   push:
     branches:
-      - dev
+      - '**'
 
 jobs:
   deploy:
     name: Deploy to Cloudflare Workers
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,3 +32,57 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+  preview:
+    name: Deploy preview to Cloudflare Workers
+    if: github.ref != 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.node-version'
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci
+      - name: Build app
+        env:
+          NODE_OPTIONS: '--max_old_space_size=4096'
+        run: npm run build
+      - name: Upload preview version to Cloudflare Workers
+        id: deploy
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --message "Preview for ${{ github.ref_name }}"
+      - name: Post commit status
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$DEPLOY_OUTCOME" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="Preview version deployed to Cloudflare Workers"
+          else
+            STATE="failure"
+            DESCRIPTION="Cloudflare Workers preview deployment failed"
+          fi
+          PAYLOAD=$(jq -n \
+            --arg state "$STATE" \
+            --arg target_url "$PREVIEW_URL" \
+            --arg description "$DESCRIPTION" \
+            --arg context "cloudflare-workers/preview" \
+            '{state: $state, target_url: $target_url, description: $description, context: $context}')
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d "$PAYLOAD"
