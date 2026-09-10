@@ -73,7 +73,7 @@ export function VerificationStatusBadge({
   );
 }
 
-function LearnStartVerificationFromOtherDevice() {
+export function LearnStartVerificationFromOtherDevice() {
   return (
     <Box direction="Column">
       <Text size="T200">Steps to verify from other device.</Text>
