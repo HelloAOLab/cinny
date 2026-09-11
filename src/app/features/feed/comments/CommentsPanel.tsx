@@ -1,18 +1,13 @@
-import React, {
-  ChangeEventHandler,
-  KeyboardEventHandler,
-  MouseEventHandler,
-  useCallback,
-  useMemo,
-  useState,
-} from 'react';
-import { MatrixEvent, MsgType, RelationType, Room } from 'matrix-js-sdk';
-import { Box, Header, Icon, IconButton, Icons, Input, Scroll, Text, config } from 'folds';
+import React, { MouseEventHandler, useCallback, useMemo, useState } from 'react';
+import { MatrixEvent, Room } from 'matrix-js-sdk';
+import { ReactEditor } from 'slate-react';
+import { Box, Header, Icon, IconButton, Icons, Scroll, Text, config } from 'folds';
 import { Opts as LinkifyOpts } from 'linkifyjs';
 import { HTMLReactParserOptions } from 'html-react-parser';
 import { useAtomValue } from 'jotai';
 import classNames from 'classnames';
 import * as css from './CommentsPanel.css';
+import { CommentComposer } from './CommentComposer';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
 import { useMentionClickHandler } from '../../../hooks/useMentionClickHandler';
@@ -27,6 +22,7 @@ import { useOpenUserRoomProfile } from '../../../state/hooks/userRoomProfile';
 import { useSetting } from '../../../state/hooks/settings';
 import { MessageLayout, MessageSpacing, settingsAtom } from '../../../state/settings';
 import { roomToParentsAtom } from '../../../state/room/roomToParents';
+import { createMentionElement, moveCursor, useEditor } from '../../../components/editor';
 import {
   factoryRenderLinkifyWithMention,
   getReactCustomHtmlParser,
@@ -159,7 +155,7 @@ type CommentsPanelProps = {
 export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelProps) {
   const mx = useMatrixClient();
   const rootEventId = postEvent.getId();
-  const [draft, setDraft] = useState('');
+  const editor = useEditor();
   const [editId, setEditId] = useState<string>();
 
   const [messageLayout] = useSetting(settingsAtom, 'messageLayout');
@@ -229,39 +225,18 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
       const userId = evt.currentTarget.getAttribute('data-user-id');
       if (!userId) return;
       const name = getMemberDisplayName(room, userId) ?? getMxIdLocalPart(userId) ?? userId;
-      const mention = name.startsWith('@') ? name : `@${name}`;
-      setDraft((d) => `${d}${d && !d.endsWith(' ') ? ' ' : ''}${mention} `);
+      editor.insertNode(
+        createMentionElement(
+          userId,
+          name.startsWith('@') ? name : `@${name}`,
+          userId === mx.getUserId()
+        )
+      );
+      ReactEditor.focus(editor);
+      moveCursor(editor);
     },
-    [room]
+    [mx, room, editor]
   );
-
-  const handleSend = useCallback(() => {
-    const body = draft.trim();
-    if (!body || !rootEventId) return;
-    mx.sendMessage(room.roomId, {
-      msgtype: MsgType.Text,
-      body,
-      'm.relates_to': {
-        rel_type: RelationType.Thread,
-        event_id: rootEventId,
-        is_falling_back: true,
-        'm.in_reply_to': {
-          event_id: rootEventId,
-        },
-      },
-    } as any);
-    setDraft('');
-  }, [mx, room, rootEventId, draft]);
-
-  const handleDraftChange: ChangeEventHandler<HTMLInputElement> = (evt) => {
-    setDraft(evt.target.value);
-  };
-  const handleKeyDown: KeyboardEventHandler<HTMLInputElement> = (evt) => {
-    if (evt.key === 'Enter' && !evt.shiftKey) {
-      evt.preventDefault();
-      handleSend();
-    }
-  };
 
   return (
     <Box
@@ -317,29 +292,13 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
           </Box>
         </Scroll>
       </Box>
-      {canSendMessage && (
-        <Box className={css.CommentsPanelFooter} shrink="No">
-          <Input
-            style={{ width: '100%' }}
-            value={draft}
-            onChange={handleDraftChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Write a comment..."
-            variant="SurfaceVariant"
-            size="400"
-            radii="400"
-            after={
-              <IconButton
-                variant="SurfaceVariant"
-                size="300"
-                radii="300"
-                onClick={handleSend}
-                aria-disabled={draft.trim().length === 0}
-                aria-label="Send comment"
-              >
-                <Icon size="100" src={Icons.Send} />
-              </IconButton>
-            }
+      {canSendMessage && rootEventId && (
+        <Box className={css.CommentsPanelFooter} shrink="No" direction="Column">
+          <CommentComposer
+            editor={editor}
+            room={room}
+            rootEventId={rootEventId}
+            imagePackRooms={imagePackRooms}
           />
         </Box>
       )}
