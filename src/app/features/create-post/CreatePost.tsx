@@ -106,9 +106,13 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
 
   const [selectedFiles, setSelectedFiles] = useState<TUploadItem[]>([]);
-  const uploadFamilyObserverAtom = createUploadFamilyObserverAtom(
-    roomUploadAtomFamily,
-    selectedFiles.map((f) => f.file)
+  const uploadFamilyObserverAtom = useMemo(
+    () =>
+      createUploadFamilyObserverAtom(
+        roomUploadAtomFamily,
+        selectedFiles.map((f) => f.file)
+      ),
+    [selectedFiles]
   );
   const uploads = useAtomValue(uploadFamilyObserverAtom);
   const uploadsPending = uploads.some((upload) => upload.status !== UploadStatus.Success);
