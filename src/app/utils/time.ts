@@ -84,3 +84,42 @@ export const getYesterday = () => {
   const date = dayjs(nowTs);
   return dateFor(date.year(), date.month() + 1, date.date());
 };
+
+const relativeTimeFormatters = new Map<Intl.RelativeTimeFormatStyle, Intl.RelativeTimeFormat>();
+
+const getRelativeTimeFormatter = (style: Intl.RelativeTimeFormatStyle): Intl.RelativeTimeFormat => {
+  let formatter = relativeTimeFormatters.get(style);
+  if (!formatter) {
+    formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style });
+    relativeTimeFormatters.set(style, formatter);
+  }
+  return formatter;
+};
+
+const RELATIVE_TIME_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', daysToMs(365)],
+  ['month', daysToMs(30)],
+  ['week', daysToMs(7)],
+  ['day', daysToMs(1)],
+  ['hour', hoursToMs(1)],
+  ['minute', minutesToMs(1)],
+  ['second', secondsToMs(1)],
+];
+
+/**
+ * Formats `ts` relative to `now` using Intl.RelativeTimeFormat, e.g. "2 days ago", "10 minutes ago".
+ */
+export const relativeTime = (
+  ts: number,
+  now: number = Date.now(),
+  style: Intl.RelativeTimeFormatStyle = 'long'
+): string => {
+  const diffMs = ts - now;
+  const absDiffMs = Math.abs(diffMs);
+
+  const [unit, unitMs] =
+    RELATIVE_TIME_UNITS.find(([, ms]) => absDiffMs >= ms) ??
+    RELATIVE_TIME_UNITS[RELATIVE_TIME_UNITS.length - 1];
+
+  return getRelativeTimeFormatter(style).format(Math.round(diffMs / unitMs), unit);
+};

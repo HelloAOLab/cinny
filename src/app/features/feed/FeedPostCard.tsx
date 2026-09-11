@@ -30,6 +30,7 @@ import {
   MImage,
   MText,
   RenderBody,
+  Time,
   Username,
   UsernameBold,
 } from '../../components/message';
@@ -123,6 +124,8 @@ type FeedPostCardProps = {
   events: MatrixEvent[];
   mediaAutoLoad?: boolean;
   urlPreview?: boolean;
+  hour24Clock: boolean;
+  dateFormatString: string;
   onOpenComments?: (room: Room, event: MatrixEvent) => void;
 };
 
@@ -131,6 +134,8 @@ export function FeedPostCard({
   events,
   mediaAutoLoad,
   urlPreview,
+  hour24Clock,
+  dateFormatString,
   onOpenComments,
 }: FeedPostCardProps) {
   const mx = useMatrixClient();
@@ -209,11 +214,16 @@ export function FeedPostCard({
             renderFallback={() => <Icon size="200" src={Icons.User} filled />}
           />
         </Avatar>
-        <Username>
+        <Username style={{ flexGrow: 1 }}>
           <Text as="span" truncate>
             <UsernameBold>{displayName}</UsernameBold>
           </Text>
         </Username>
+        <Time
+          ts={primaryEvent.getTs()}
+          hour24Clock={hour24Clock}
+          dateFormatString={dateFormatString}
+        />
       </Box>
       {events.map((event) => (
         <FeedPostEventBody
