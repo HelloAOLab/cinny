@@ -1,10 +1,14 @@
-import React from 'react';
-import { Box, Icon, Icons } from 'folds';
+import React, { useState } from 'react';
+import { Box, Icon, Icons, Overlay, OverlayBackdrop } from 'folds';
+import { MatrixEvent, Room } from 'matrix-js-sdk';
+import FocusTrap from 'focus-trap-react';
 import { PageHero, PageHeroEmpty, PageHeroSection } from '../../components/page';
 import { useSetting } from '../../state/hooks/settings';
 import { settingsAtom } from '../../state/settings';
+import { stopPropagation } from '../../utils/keyboard';
 import { useFeedPosts } from './useFeedPosts';
 import { FeedPostCard } from './FeedPostCard';
+import { CommentsPanel } from './comments/CommentsPanel';
 
 type FeedProps = {
   rooms: string[];
@@ -13,8 +17,12 @@ type FeedProps = {
 export function Feed({ rooms }: FeedProps) {
   const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
   const [urlPreview] = useSetting(settingsAtom, 'urlPreview');
+  const [commentsTarget, setCommentsTarget] = useState<{ room: Room; event: MatrixEvent }>();
 
   const posts = useFeedPosts(rooms);
+
+  const handleOpenComments = (room: Room, event: MatrixEvent) => setCommentsTarget({ room, event });
+  const handleCloseComments = () => setCommentsTarget(undefined);
 
   if (posts.length === 0) {
     return (
@@ -39,8 +47,30 @@ export function Feed({ rooms }: FeedProps) {
           event={post.event}
           mediaAutoLoad={mediaAutoLoad}
           urlPreview={urlPreview}
+          onOpenComments={handleOpenComments}
         />
       ))}
+      <Overlay open={!!commentsTarget} backdrop={<OverlayBackdrop />}>
+        <Box style={{ height: '100%' }} justifyContent="End">
+          {commentsTarget && (
+            <FocusTrap
+              focusTrapOptions={{
+                initialFocus: false,
+                returnFocusOnDeactivate: false,
+                onDeactivate: handleCloseComments,
+                clickOutsideDeactivates: true,
+                escapeDeactivates: stopPropagation,
+              }}
+            >
+              <CommentsPanel
+                room={commentsTarget.room}
+                postEvent={commentsTarget.event}
+                requestClose={handleCloseComments}
+              />
+            </FocusTrap>
+          )}
+        </Box>
+      </Overlay>
     </Box>
   );
 }

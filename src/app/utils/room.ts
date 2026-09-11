@@ -414,6 +414,20 @@ export const getEventReactions = (timelineSet: EventTimelineSet, eventId: string
 export const getEventEdits = (timelineSet: EventTimelineSet, eventId: string, eventType: string) =>
   timelineSet.relations.getChildEventsForEvent(eventId, RelationType.Replace, eventType);
 
+export const getEventThreadReplies = (timelineSet: EventTimelineSet, eventId: string) =>
+  timelineSet.relations.getChildEventsForEvent(
+    eventId,
+    RelationType.Thread,
+    MessageEvent.RoomMessage
+  );
+
+export const isPostCommentEvent = (room: Room, mEvent: MatrixEvent): boolean => {
+  const relation = mEvent.getRelation();
+  if (relation?.rel_type !== RelationType.Thread || !relation.event_id) return false;
+  const rootEvent = room.findEventById(relation.event_id);
+  return rootEvent?.getContent()['m.post'] === true;
+};
+
 export const getLatestEdit = (
   targetEvent: MatrixEvent,
   editEvents: MatrixEvent[]

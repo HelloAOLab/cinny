@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { Opts as LinkifyOpts } from 'linkifyjs';
 import { HTMLReactParserOptions } from 'html-react-parser';
-import { Avatar, Box, Icon, IconButton, Icons, PopOut, RectCords, Text, config } from 'folds';
+import { Avatar, Box, Chip, Icon, IconButton, Icons, PopOut, RectCords, Text, config } from 'folds';
 import { useAtomValue } from 'jotai';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
@@ -12,6 +12,8 @@ import { useRoomCreators } from '../../hooks/useRoomCreators';
 import { usePowerLevels } from '../../hooks/usePowerLevels';
 import { useRoomPermissions } from '../../hooks/useRoomPermissions';
 import { useImagePackRooms } from '../../hooks/useImagePackRooms';
+import { useReactionToggle } from '../../hooks/useReactionToggle';
+import { useThreadReplies } from '../../hooks/useThreadReplies';
 import { roomToParentsAtom } from '../../state/room/roomToParents';
 import {
   factoryRenderLinkifyWithMention,
@@ -20,18 +22,8 @@ import {
   makeMentionCustomProps,
   renderMatrixMention,
 } from '../../plugins/react-custom-html-parser';
-import {
-  getEventReactions,
-  getMemberAvatarMxc,
-  getMemberDisplayName,
-  getReactionContent,
-} from '../../utils/room';
-import {
-  eventWithShortcode,
-  factoryEventSentBy,
-  getMxIdLocalPart,
-  mxcUrlToHttp,
-} from '../../utils/matrix';
+import { getEventReactions, getMemberAvatarMxc, getMemberDisplayName } from '../../utils/room';
+import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
 import {
   ImageContent,
@@ -55,9 +47,16 @@ type FeedPostCardProps = {
   event: MatrixEvent;
   mediaAutoLoad?: boolean;
   urlPreview?: boolean;
+  onOpenComments?: (room: Room, event: MatrixEvent) => void;
 };
 
-export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPostCardProps) {
+export function FeedPostCard({
+  room,
+  event,
+  mediaAutoLoad,
+  urlPreview,
+  onOpenComments,
+}: FeedPostCardProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
@@ -112,30 +111,9 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
     ? getEventReactions(room.getUnfilteredTimelineSet(), eventId)
     : undefined;
   const hasReactions = (reactionRelations?.getSortedAnnotationsByKey()?.length ?? 0) > 0;
+  const handleReactionToggle = useReactionToggle(room);
 
-  const handleReactionToggle = useCallback(
-    (targetEventId: string, key: string, shortcode?: string) => {
-      const relations = getEventReactions(room.getUnfilteredTimelineSet(), targetEventId);
-      const allReactions = relations?.getSortedAnnotationsByKey() ?? [];
-      const [, reactionsSet] = allReactions.find(([k]) => k === key) ?? [];
-      const reactions = reactionsSet ? Array.from(reactionsSet) : [];
-      const myReaction = reactions.find(factoryEventSentBy(mx.getUserId()!));
-
-      if (myReaction && myReaction.isRelation()) {
-        mx.redactEvent(room.roomId, myReaction.getId()!);
-        return;
-      }
-      const rShortcode =
-        shortcode ||
-        (reactions.find(eventWithShortcode)?.getContent().shortcode as string | undefined);
-      mx.sendEvent(
-        room.roomId,
-        MessageEvent.Reaction as any,
-        getReactionContent(targetEventId, key, rShortcode)
-      );
-    },
-    [mx, room]
-  );
+  const commentCount = useThreadReplies(room, eventId).length;
 
   if (!msgType) return null;
 
@@ -211,50 +189,60 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
           />
         </Box>
       )}
-      {(canSendReaction || hasReactions) && eventId && (
-        <Box alignItems="Center" gap="200" wrap="Wrap">
-          {canSendReaction && (
-            <PopOut
-              position="Bottom"
-              align="Start"
-              anchor={emojiBoardAnchor}
-              content={
-                <EmojiBoard
-                  imagePackRooms={imagePackRooms}
-                  returnFocusOnDeactivate={false}
-                  allowTextCustomEmoji
-                  onEmojiSelect={(key) => {
-                    handleReactionToggle(eventId, key);
-                    setEmojiBoardAnchor(undefined);
-                  }}
-                  onCustomEmojiSelect={(mxc, shortcode) => {
-                    handleReactionToggle(eventId, mxc, shortcode);
-                    setEmojiBoardAnchor(undefined);
-                  }}
-                  requestClose={() => setEmojiBoardAnchor(undefined)}
-                />
-              }
-            >
-              <IconButton
-                onClick={(evt) => setEmojiBoardAnchor(evt.currentTarget.getBoundingClientRect())}
-                variant="SurfaceVariant"
-                size="300"
-                radii="300"
-                aria-pressed={!!emojiBoardAnchor}
+      {eventId && (
+        <Box alignItems="Center" justifyContent="SpaceBetween" gap="200">
+          <Box alignItems="Center" gap="200" wrap="Wrap">
+            {canSendReaction && (
+              <PopOut
+                position="Bottom"
+                align="Start"
+                anchor={emojiBoardAnchor}
+                content={
+                  <EmojiBoard
+                    imagePackRooms={imagePackRooms}
+                    returnFocusOnDeactivate={false}
+                    allowTextCustomEmoji
+                    onEmojiSelect={(key) => {
+                      handleReactionToggle(eventId, key);
+                      setEmojiBoardAnchor(undefined);
+                    }}
+                    onCustomEmojiSelect={(mxc, shortcode) => {
+                      handleReactionToggle(eventId, mxc, shortcode);
+                      setEmojiBoardAnchor(undefined);
+                    }}
+                    requestClose={() => setEmojiBoardAnchor(undefined)}
+                  />
+                }
               >
-                <Icon src={Icons.SmilePlus} size="100" />
-              </IconButton>
-            </PopOut>
-          )}
-          {reactionRelations && hasReactions && (
-            <Reactions
-              room={room}
-              relations={reactionRelations}
-              mEventId={eventId}
-              canSendReaction={canSendReaction}
-              onReactionToggle={handleReactionToggle}
-            />
-          )}
+                <IconButton
+                  onClick={(evt) => setEmojiBoardAnchor(evt.currentTarget.getBoundingClientRect())}
+                  variant="SurfaceVariant"
+                  size="300"
+                  radii="300"
+                  aria-pressed={!!emojiBoardAnchor}
+                >
+                  <Icon src={Icons.SmilePlus} size="100" />
+                </IconButton>
+              </PopOut>
+            )}
+            {reactionRelations && hasReactions && (
+              <Reactions
+                room={room}
+                relations={reactionRelations}
+                mEventId={eventId}
+                canSendReaction={canSendReaction}
+                onReactionToggle={handleReactionToggle}
+              />
+            )}
+          </Box>
+          <Chip
+            onClick={() => onOpenComments?.(room, event)}
+            variant="SurfaceVariant"
+            radii="Pill"
+            before={<Icon size="100" src={Icons.Message} />}
+          >
+            <Text size="T200">{commentCount}</Text>
+          </Chip>
         </Box>
       )}
     </SequenceCard>
