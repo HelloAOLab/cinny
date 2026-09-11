@@ -245,6 +245,7 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
       {canSendMessage && (
         <Box className={css.CommentsPanelFooter} shrink="No">
           <Input
+            style={{ width: '100%' }}
             value={draft}
             onChange={handleDraftChange}
             onKeyDown={handleKeyDown}
