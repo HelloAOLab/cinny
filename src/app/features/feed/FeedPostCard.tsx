@@ -1,12 +1,20 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { Opts as LinkifyOpts } from 'linkifyjs';
 import { HTMLReactParserOptions } from 'html-react-parser';
-import { Avatar, Box, Icon, Icons, Text, config } from 'folds';
+import { Avatar, Box, Chip, Icon, IconButton, Icons, PopOut, RectCords, Text, config } from 'folds';
+import { useAtomValue } from 'jotai';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useMentionClickHandler } from '../../hooks/useMentionClickHandler';
 import { useSpoilerClickHandler } from '../../hooks/useSpoilerClickHandler';
+import { useRoomCreators } from '../../hooks/useRoomCreators';
+import { usePowerLevels } from '../../hooks/usePowerLevels';
+import { useRoomPermissions } from '../../hooks/useRoomPermissions';
+import { useImagePackRooms } from '../../hooks/useImagePackRooms';
+import { useReactionToggle } from '../../hooks/useReactionToggle';
+import { useThreadReplies } from '../../hooks/useThreadReplies';
+import { roomToParentsAtom } from '../../state/room/roomToParents';
 import {
   factoryRenderLinkifyWithMention,
   getReactCustomHtmlParser,
@@ -14,7 +22,7 @@ import {
   makeMentionCustomProps,
   renderMatrixMention,
 } from '../../plugins/react-custom-html-parser';
-import { getMemberAvatarMxc, getMemberDisplayName } from '../../utils/room';
+import { getEventReactions, getMemberAvatarMxc, getMemberDisplayName } from '../../utils/room';
 import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
 import {
@@ -29,7 +37,9 @@ import { Image } from '../../components/media';
 import { ImageViewer } from '../../components/image-viewer';
 import { SequenceCard } from '../../components/sequence-card';
 import { UserAvatar } from '../../components/user-avatar';
-import { GetContentCallback } from '../../../types/matrix/room';
+import { EmojiBoard } from '../../components/emoji-board';
+import { Reactions } from '../room/message';
+import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
 
 type FeedPostCardProps = {
@@ -37,9 +47,16 @@ type FeedPostCardProps = {
   event: MatrixEvent;
   mediaAutoLoad?: boolean;
   urlPreview?: boolean;
+  onOpenComments?: (room: Room, event: MatrixEvent) => void;
 };
 
-export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPostCardProps) {
+export function FeedPostCard({
+  room,
+  event,
+  mediaAutoLoad,
+  urlPreview,
+  onOpenComments,
+}: FeedPostCardProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
@@ -79,6 +96,24 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
       }),
     [mx, room, linkifyOpts, mentionClickHandler, spoilerClickHandler, useAuthentication]
   );
+
+  const eventId = event.getId();
+  const [emojiBoardAnchor, setEmojiBoardAnchor] = useState<RectCords>();
+
+  const roomToParents = useAtomValue(roomToParentsAtom);
+  const imagePackRooms = useImagePackRooms(room.roomId, roomToParents);
+  const creators = useRoomCreators(room);
+  const powerLevels = usePowerLevels(room);
+  const permissions = useRoomPermissions(creators, powerLevels);
+  const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
+
+  const reactionRelations = eventId
+    ? getEventReactions(room.getUnfilteredTimelineSet(), eventId)
+    : undefined;
+  const hasReactions = (reactionRelations?.getSortedAnnotationsByKey()?.length ?? 0) > 0;
+  const handleReactionToggle = useReactionToggle(room);
+
+  const commentCount = useThreadReplies(room, eventId).length;
 
   if (!msgType) return null;
 
@@ -152,6 +187,62 @@ export function FeedPostCard({ room, event, mediaAutoLoad, urlPreview }: FeedPos
             htmlReactParserOptions={htmlReactParserOptions}
             linkifyOpts={linkifyOpts}
           />
+        </Box>
+      )}
+      {eventId && (
+        <Box alignItems="Center" justifyContent="SpaceBetween" gap="200">
+          <Box alignItems="Center" gap="200" wrap="Wrap">
+            {canSendReaction && (
+              <PopOut
+                position="Bottom"
+                align="Start"
+                anchor={emojiBoardAnchor}
+                content={
+                  <EmojiBoard
+                    imagePackRooms={imagePackRooms}
+                    returnFocusOnDeactivate={false}
+                    allowTextCustomEmoji
+                    onEmojiSelect={(key) => {
+                      handleReactionToggle(eventId, key);
+                      setEmojiBoardAnchor(undefined);
+                    }}
+                    onCustomEmojiSelect={(mxc, shortcode) => {
+                      handleReactionToggle(eventId, mxc, shortcode);
+                      setEmojiBoardAnchor(undefined);
+                    }}
+                    requestClose={() => setEmojiBoardAnchor(undefined)}
+                  />
+                }
+              >
+                <IconButton
+                  onClick={(evt) => setEmojiBoardAnchor(evt.currentTarget.getBoundingClientRect())}
+                  variant="SurfaceVariant"
+                  size="300"
+                  radii="300"
+                  aria-pressed={!!emojiBoardAnchor}
+                >
+                  <Icon src={Icons.SmilePlus} size="100" />
+                </IconButton>
+              </PopOut>
+            )}
+            {reactionRelations && hasReactions && (
+              <Reactions
+                room={room}
+                relations={reactionRelations}
+                mEventId={eventId}
+                canSendReaction={canSendReaction}
+                onReactionToggle={handleReactionToggle}
+              />
+            )}
+          </Box>
+          <Chip
+            onClick={() => onOpenComments?.(room, event)}
+            variant="SurfaceVariant"
+            radii="Pill"
+            before={<Icon size="100" src={Icons.Message} />}
+          >
+            <Text size="T200">{commentCount}</Text>
+          </Chip>
         </Box>
       )}
     </SequenceCard>

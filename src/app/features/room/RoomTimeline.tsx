@@ -81,6 +81,7 @@ import {
   getMemberDisplayName,
   getReactionContent,
   isMembershipChanged,
+  isPostCommentEvent,
   reactionOrEditEvent,
 } from '../../utils/room';
 import { useSetting } from '../../state/hooks/settings';
@@ -1656,17 +1657,18 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
       prevEvent.getType() === mEvent.getType() &&
       minuteDifference(prevEvent.getTs(), mEvent.getTs()) < 2;
 
-    const eventJSX = reactionOrEditEvent(mEvent)
-      ? null
-      : renderMatrixEvent(
-          mEvent.getType(),
-          typeof mEvent.getStateKey() === 'string',
-          mEventId,
-          mEvent,
-          item,
-          timelineSet,
-          collapsed
-        );
+    const eventJSX =
+      reactionOrEditEvent(mEvent) || isPostCommentEvent(room, mEvent)
+        ? null
+        : renderMatrixEvent(
+            mEvent.getType(),
+            typeof mEvent.getStateKey() === 'string',
+            mEventId,
+            mEvent,
+            item,
+            timelineSet,
+            collapsed
+          );
     prevEvent = mEvent;
     isPrevRendered = !!eventJSX;
 
