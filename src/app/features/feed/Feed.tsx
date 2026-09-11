@@ -18,6 +18,8 @@ type FeedProps = {
 export function Feed({ rooms }: FeedProps) {
   const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
   const [urlPreview] = useSetting(settingsAtom, 'urlPreview');
+  const [hour24Clock] = useSetting(settingsAtom, 'hour24Clock');
+  const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
   const [commentsTarget, setCommentsTarget] = useState<{ room: Room; event: MatrixEvent }>();
 
   const posts = useFeedPosts(rooms);
@@ -49,6 +51,8 @@ export function Feed({ rooms }: FeedProps) {
           events={group.posts.map((post) => post.event)}
           mediaAutoLoad={mediaAutoLoad}
           urlPreview={urlPreview}
+          hour24Clock={hour24Clock}
+          dateFormatString={dateFormatString}
           onOpenComments={handleOpenComments}
         />
       ))}
