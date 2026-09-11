@@ -157,7 +157,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   }, []);
 
   const sendAttachments = useCallback(
-    async (successUploads: UploadSuccess[]) => {
+    async (successUploads: UploadSuccess[], caption?: { body: string; formattedBody?: string }) => {
       if (!roomId) return;
       const contentsPromises = successUploads.map(async (upload) => {
         const fileItem = selectedFiles.find((f) => f.file === upload.file);
@@ -170,6 +170,15 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
         return getFileMsgContent(fileItem, upload.mxc);
       });
       const contents = fulfilledPromiseSettledResult(await Promise.allSettled(contentsPromises));
+      // A lone attachment carries the typed text as its caption (body distinct from
+      // filename) so the feed renders it as a single post card instead of two.
+      if (caption && contents.length === 1) {
+        contents[0].body = caption.body;
+        if (caption.formattedBody) {
+          contents[0].format = 'org.matrix.custom.html';
+          contents[0].formatted_body = caption.formattedBody;
+        }
+      }
       await Promise.all(
         contents.map((content) => mx.sendMessage(roomId, { ...content, 'm.post': true } as any))
       );
@@ -188,6 +197,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       const plainText = toPlainText(editor.children, isMarkdown).trim();
       const hasText = plainText !== '';
       const hasAttachments = selectedFiles.length > 0;
+      const mergeCaptionIntoAttachment = hasText && selectedFiles.length === 1;
 
       if (!hasText && !hasAttachments) {
         throw new Error('Enter some content or attach a file to share');
@@ -196,19 +206,26 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
         throw new Error('Wait for attachments to finish uploading');
       }
 
-      if (hasAttachments) {
-        await sendAttachments(uploads as UploadSuccess[]);
-      }
-
+      let customHtml: string | undefined;
       if (hasText) {
-        const customHtml = trimCustomHtml(
+        const html = trimCustomHtml(
           toMatrixCustomHTML(editor.children, {
             allowTextFormatting: true,
             allowBlockMarkdown: isMarkdown,
             allowInlineMarkdown: isMarkdown,
           })
         );
+        customHtml = customHtmlEqualsPlainText(html, plainText) ? undefined : html;
+      }
 
+      if (hasAttachments) {
+        await sendAttachments(
+          uploads as UploadSuccess[],
+          mergeCaptionIntoAttachment ? { body: plainText, formattedBody: customHtml } : undefined
+        );
+      }
+
+      if (hasText && !mergeCaptionIntoAttachment) {
         const mentionData = getMentions(mx, roomId, editor);
         const mMentions = getMentionContent(Array.from(mentionData.users), mentionData.room);
 
@@ -218,7 +235,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           'm.mentions': mMentions,
           'm.post': true,
         };
-        if (!customHtmlEqualsPlainText(customHtml, plainText)) {
+        if (customHtml) {
           content.format = 'org.matrix.custom.html';
           content.formatted_body = customHtml;
         }
