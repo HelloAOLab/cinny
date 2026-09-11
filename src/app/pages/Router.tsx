@@ -34,6 +34,7 @@ import {
 import {
   getAppPathFromHref,
   getExploreFeaturedPath,
+  getHomeFeedPath,
   getHomePath,
   getInboxNotificationsPath,
   getLoginPath,
@@ -173,7 +174,9 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
             </PageRoot>
           }
         >
-          {mobile ? null : <Route index element={<WelcomePage />} />}
+          {mobile ? null : (
+            <Route index loader={() => redirect(getHomeFeedPath())} element={<WelcomePage />} />
+          )}
           <Route path={_CREATE_PATH} element={<HomeCreateRoom />} />
           <Route path={_JOIN_PATH} element={<p>join</p>} />
           <Route path={_SEARCH_PATH} element={<HomeSearch />} />
