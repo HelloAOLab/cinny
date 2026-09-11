@@ -2,7 +2,19 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { Opts as LinkifyOpts } from 'linkifyjs';
 import { HTMLReactParserOptions } from 'html-react-parser';
-import { Avatar, Box, Chip, Icon, IconButton, Icons, PopOut, RectCords, Text, config } from 'folds';
+import {
+  Avatar,
+  Box,
+  Chip,
+  Icon,
+  IconButton,
+  Icons,
+  PopOut,
+  RectCords,
+  Scroll,
+  Text,
+  config,
+} from 'folds';
 import { useAtomValue } from 'jotai';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
@@ -42,6 +54,7 @@ import { EmojiBoard } from '../../components/emoji-board';
 import { Reactions } from '../room/message';
 import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
+import { groupFeedEventRuns } from './feedAttachmentRuns';
 
 type FeedPostEventBodyProps = {
   event: MatrixEvent;
@@ -225,17 +238,41 @@ export function FeedPostCard({
           dateFormatString={dateFormatString}
         />
       </Box>
-      {events.map((event) => (
-        <FeedPostEventBody
-          key={event.getId()}
-          event={event}
-          displayName={displayName}
-          mediaAutoLoad={mediaAutoLoad}
-          urlPreview={urlPreview}
-          htmlReactParserOptions={htmlReactParserOptions}
-          linkifyOpts={linkifyOpts}
-        />
-      ))}
+      {groupFeedEventRuns(events).map((run) => {
+        const body = (event: MatrixEvent) => (
+          <FeedPostEventBody
+            key={event.getId()}
+            event={event}
+            displayName={displayName}
+            mediaAutoLoad={mediaAutoLoad}
+            urlPreview={urlPreview}
+            htmlReactParserOptions={htmlReactParserOptions}
+            linkifyOpts={linkifyOpts}
+          />
+        );
+
+        if (run.isAttachmentRun && run.events.length > 1) {
+          return (
+            <Scroll
+              key={run.events[0].getId()}
+              direction="Horizontal"
+              size="0"
+              visibility="Hover"
+              hideTrack
+            >
+              <Box gap="200">
+                {run.events.map((event) => (
+                  <Box key={event.getId()} direction="Column" shrink="No">
+                    {body(event)}
+                  </Box>
+                ))}
+              </Box>
+            </Scroll>
+          );
+        }
+
+        return run.events.map((event) => body(event));
+      })}
       {eventId && (
         <Box alignItems="Center" justifyContent="SpaceBetween" gap="200">
           <Box alignItems="Center" gap="200" wrap="Wrap">
