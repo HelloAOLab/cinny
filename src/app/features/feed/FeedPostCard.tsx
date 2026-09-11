@@ -42,9 +42,85 @@ import { Reactions } from '../room/message';
 import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
 
+type FeedPostEventBodyProps = {
+  event: MatrixEvent;
+  displayName: string;
+  mediaAutoLoad?: boolean;
+  urlPreview?: boolean;
+  htmlReactParserOptions: HTMLReactParserOptions;
+  linkifyOpts: LinkifyOpts;
+};
+function FeedPostEventBody({
+  event,
+  displayName,
+  mediaAutoLoad,
+  urlPreview,
+  htmlReactParserOptions,
+  linkifyOpts,
+}: FeedPostEventBodyProps) {
+  const content = event.getContent();
+  const msgType = typeof content.msgtype === 'string' ? content.msgtype : undefined;
+  const getContent = useCallback(() => content, [content]) as GetContentCallback;
+
+  if (!msgType) return null;
+
+  const isImagePost = msgType === MsgType.Image;
+  const showImageCaption =
+    isImagePost &&
+    typeof content.body === 'string' &&
+    typeof content.filename === 'string' &&
+    content.filename !== content.body;
+
+  if (isImagePost) {
+    return (
+      <>
+        <MImage
+          content={content as IImageContent}
+          renderImageContent={(props) => (
+            <ImageContent
+              {...props}
+              autoPlay={mediaAutoLoad}
+              renderImage={(p) => <Image {...p} loading="lazy" />}
+              renderViewer={(p) => <ImageViewer {...p} />}
+            />
+          )}
+        />
+        {showImageCaption && (
+          <MText
+            content={content}
+            renderBody={(p) => (
+              <RenderBody
+                {...p}
+                htmlReactParserOptions={htmlReactParserOptions}
+                linkifyOpts={linkifyOpts}
+              />
+            )}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <Box direction="Column">
+      <RenderMessageContent
+        displayName={displayName}
+        msgType={msgType}
+        ts={event.getTs()}
+        getContent={getContent}
+        mediaAutoLoad={mediaAutoLoad}
+        urlPreview={urlPreview}
+        htmlReactParserOptions={htmlReactParserOptions}
+        linkifyOpts={linkifyOpts}
+      />
+    </Box>
+  );
+}
+
 type FeedPostCardProps = {
   room: Room;
-  event: MatrixEvent;
+  /** Events from the same sender, close together in time, oldest first. Non-empty. */
+  events: MatrixEvent[];
   mediaAutoLoad?: boolean;
   urlPreview?: boolean;
   onOpenComments?: (room: Room, event: MatrixEvent) => void;
@@ -52,7 +128,7 @@ type FeedPostCardProps = {
 
 export function FeedPostCard({
   room,
-  event,
+  events,
   mediaAutoLoad,
   urlPreview,
   onOpenComments,
@@ -62,9 +138,10 @@ export function FeedPostCard({
   const mentionClickHandler = useMentionClickHandler(room.roomId);
   const spoilerClickHandler = useSpoilerClickHandler();
 
-  const content = event.getContent();
-  const msgType = typeof content.msgtype === 'string' ? content.msgtype : undefined;
-  const senderId = event.getSender();
+  // Reactions and the comment thread anchor to the most recent event in the
+  // group, since that's the one a reply/reaction would naturally target.
+  const primaryEvent = events[events.length - 1];
+  const senderId = primaryEvent.getSender();
   const displayName =
     (senderId && getMemberDisplayName(room, senderId)) ??
     (senderId && getMxIdLocalPart(senderId)) ??
@@ -74,8 +151,6 @@ export function FeedPostCard({
   const senderAvatarUrl = senderAvatarMxc
     ? mxcUrlToHttp(mx, senderAvatarMxc, useAuthentication, 48, 48, 'crop') ?? undefined
     : undefined;
-
-  const getContent = useCallback(() => content, [content]) as GetContentCallback;
 
   const linkifyOpts = useMemo<LinkifyOpts>(
     () => ({
@@ -97,7 +172,7 @@ export function FeedPostCard({
     [mx, room, linkifyOpts, mentionClickHandler, spoilerClickHandler, useAuthentication]
   );
 
-  const eventId = event.getId();
+  const eventId = primaryEvent.getId();
   const [emojiBoardAnchor, setEmojiBoardAnchor] = useState<RectCords>();
 
   const roomToParents = useAtomValue(roomToParentsAtom);
@@ -115,15 +190,6 @@ export function FeedPostCard({
 
   const commentCount = useThreadReplies(room, eventId).length;
 
-  if (!msgType) return null;
-
-  const isImagePost = msgType === MsgType.Image;
-  const showImageCaption =
-    isImagePost &&
-    typeof content.body === 'string' &&
-    typeof content.filename === 'string' &&
-    content.filename !== content.body;
-
   return (
     <SequenceCard
       variant="SurfaceVariant"
@@ -134,19 +200,6 @@ export function FeedPostCard({
       <Text as="h4" size="H4" truncate>
         {room.name}
       </Text>
-      {isImagePost && (
-        <MImage
-          content={content as IImageContent}
-          renderImageContent={(props) => (
-            <ImageContent
-              {...props}
-              autoPlay={mediaAutoLoad}
-              renderImage={(p) => <Image {...p} loading="lazy" />}
-              renderViewer={(p) => <ImageViewer {...p} />}
-            />
-          )}
-        />
-      )}
       <Box alignItems="Center" gap="200">
         <Avatar size="300">
           <UserAvatar
@@ -162,33 +215,17 @@ export function FeedPostCard({
           </Text>
         </Username>
       </Box>
-      {isImagePost ? (
-        showImageCaption && (
-          <MText
-            content={content}
-            renderBody={(p) => (
-              <RenderBody
-                {...p}
-                htmlReactParserOptions={htmlReactParserOptions}
-                linkifyOpts={linkifyOpts}
-              />
-            )}
-          />
-        )
-      ) : (
-        <Box direction="Column">
-          <RenderMessageContent
-            displayName={displayName}
-            msgType={msgType}
-            ts={event.getTs()}
-            getContent={getContent}
-            mediaAutoLoad={mediaAutoLoad}
-            urlPreview={urlPreview}
-            htmlReactParserOptions={htmlReactParserOptions}
-            linkifyOpts={linkifyOpts}
-          />
-        </Box>
-      )}
+      {events.map((event) => (
+        <FeedPostEventBody
+          key={event.getId()}
+          event={event}
+          displayName={displayName}
+          mediaAutoLoad={mediaAutoLoad}
+          urlPreview={urlPreview}
+          htmlReactParserOptions={htmlReactParserOptions}
+          linkifyOpts={linkifyOpts}
+        />
+      ))}
       {eventId && (
         <Box alignItems="Center" justifyContent="SpaceBetween" gap="200">
           <Box alignItems="Center" gap="200" wrap="Wrap">
@@ -236,7 +273,7 @@ export function FeedPostCard({
             )}
           </Box>
           <Chip
-            onClick={() => onOpenComments?.(room, event)}
+            onClick={() => onOpenComments?.(room, primaryEvent)}
             variant="SurfaceVariant"
             radii="Pill"
             before={<Icon size="100" src={Icons.Message} />}

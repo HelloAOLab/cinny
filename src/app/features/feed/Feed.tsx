@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Icon, Icons, Overlay, OverlayBackdrop } from 'folds';
 import { MatrixEvent, Room } from 'matrix-js-sdk';
 import FocusTrap from 'focus-trap-react';
@@ -7,6 +7,7 @@ import { useSetting } from '../../state/hooks/settings';
 import { settingsAtom } from '../../state/settings';
 import { stopPropagation } from '../../utils/keyboard';
 import { useFeedPosts } from './useFeedPosts';
+import { groupFeedPosts } from './groupFeedPosts';
 import { FeedPostCard } from './FeedPostCard';
 import { CommentsPanel } from './comments/CommentsPanel';
 
@@ -20,6 +21,7 @@ export function Feed({ rooms }: FeedProps) {
   const [commentsTarget, setCommentsTarget] = useState<{ room: Room; event: MatrixEvent }>();
 
   const posts = useFeedPosts(rooms);
+  const postGroups = useMemo(() => groupFeedPosts(posts), [posts]);
 
   const handleOpenComments = (room: Room, event: MatrixEvent) => setCommentsTarget({ room, event });
   const handleCloseComments = () => setCommentsTarget(undefined);
@@ -40,11 +42,11 @@ export function Feed({ rooms }: FeedProps) {
 
   return (
     <Box direction="Column" gap="400">
-      {posts.map((post) => (
+      {postGroups.map((group) => (
         <FeedPostCard
-          key={post.event.getId()}
-          room={post.room}
-          event={post.event}
+          key={group.posts[0].event.getId()}
+          room={group.room}
+          events={group.posts.map((post) => post.event)}
           mediaAutoLoad={mediaAutoLoad}
           urlPreview={urlPreview}
           onOpenComments={handleOpenComments}
