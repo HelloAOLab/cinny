@@ -54,7 +54,7 @@ export function About({ requestClose }: AboutProps) {
                   <Box gap="200" wrap="Wrap">
                     <Button
                       as="a"
-                      href="https://github.com/cinnyapp/cinny"
+                      href="https://github.com/HelloAOLab/cinny"
                       rel="noreferrer noopener"
                       target="_blank"
                       variant="Secondary"
@@ -64,19 +64,6 @@ export function About({ requestClose }: AboutProps) {
                       before={<Icon src={Icons.Code} size="100" filled />}
                     >
                       <Text size="B300">Source Code</Text>
-                    </Button>
-                    <Button
-                      as="a"
-                      href="https://cinny.in/#sponsor"
-                      rel="noreferrer noopener"
-                      target="_blank"
-                      variant="Critical"
-                      fill="Soft"
-                      size="300"
-                      radii="300"
-                      before={<Icon src={Icons.Heart} size="100" filled />}
-                    >
-                      <Text size="B300">Support</Text>
                     </Button>
                   </Box>
                 </Box>
