@@ -1,14 +1,17 @@
 import React, { useRef } from 'react';
-import { Box, Icon, Icons, Text, Scroll, IconButton } from 'folds';
+import { Box, Icon, Icons, Text, Scroll, IconButton, Button } from 'folds';
 import { Page, PageContent, PageContentCenter, PageHeader } from '../../../components/page';
 import { Feed, useFeedRooms } from '../../../features/feed';
+import { useOpenCreatePostModal } from '../../../state/hooks/createPostModal';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 import { BackRouteHandler } from '../../../components/BackRouteHandler';
+import * as css from './Feed.css';
 
 export function HomeFeed() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rooms = useFeedRooms();
   const screenSize = useScreenSizeContext();
+  const openCreatePostModal = useOpenCreatePostModal();
 
   return (
     <Page>
@@ -42,6 +45,17 @@ export function HomeFeed() {
             </PageContentCenter>
           </PageContent>
         </Scroll>
+        <Box className={css.CreatePostFab}>
+          <Button
+            variant="Primary"
+            radii="Pill"
+            size="500"
+            before={<Icon src={Icons.Plus} size="100" />}
+            onClick={() => openCreatePostModal()}
+          >
+            <Text size="B500">Share</Text>
+          </Button>
+        </Box>
       </Box>
     </Page>
   );
