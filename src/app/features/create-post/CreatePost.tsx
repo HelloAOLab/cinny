@@ -53,6 +53,8 @@ import { nameInitials, millisecondsToMinutes } from '../../utils/common';
 import { getMentionContent, getRoomAvatarUrl } from '../../utils/room';
 import { ErrorCode } from '../../cs-errorcode';
 import { stopPropagation } from '../../utils/keyboard';
+import { isMacOS } from '../../utils/user-agent';
+import { KeySymbol } from '../../utils/key-symbol';
 
 type CreatePostFormProps = {
   defaultRoomId?: string;
@@ -66,7 +68,6 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   const feedRoomIds = useFeedRooms();
   const isComposing = useComposingCheck();
 
-  const [enterForNewline] = useSetting(settingsAtom, 'enterForNewline');
   const [isMarkdown] = useSetting(settingsAtom, 'isMarkdown');
   const [globalToolbar] = useSetting(settingsAtom, 'editorToolbar');
   const [toolbar, setToolbar] = useState(globalToolbar);
@@ -130,17 +131,16 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
     });
   }, [loading, create, alive, onCreate]);
 
+  // Posts are multi-line by design: plain Enter always inserts a newline
+  // (regardless of the chat "enterForNewline" setting) and only mod+Enter submits.
   const handleKeyDown: KeyboardEventHandler = useCallback(
     (evt) => {
-      if (
-        (isKeyHotkey('mod+enter', evt) || (!enterForNewline && isKeyHotkey('enter', evt))) &&
-        !isComposing(evt)
-      ) {
+      if (isKeyHotkey('mod+enter', evt) && !isComposing(evt)) {
         evt.preventDefault();
         submit();
       }
     },
-    [submit, enterForNewline, isComposing]
+    [submit, isComposing]
   );
 
   const handleOpenMenu: MouseEventHandler<HTMLButtonElement> = (evt) => {
@@ -233,6 +233,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           editableName="CreatePost"
           editor={editor}
           placeholder="Share something..."
+          maxHeight="30vh"
           onKeyDown={handleKeyDown}
           after={
             <IconButton
@@ -255,6 +256,9 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
             )
           }
         />
+        <Text size="T200" priority="300">
+          Press Enter for a new line. {isMacOS() ? KeySymbol.Command : 'Ctrl'} + Enter to share.
+        </Text>
       </Box>
       {error && (
         <Box style={{ color: color.Critical.Main }} alignItems="Center" gap="200">
