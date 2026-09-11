@@ -1,32 +1,56 @@
-import React, { FormEventHandler, MouseEventHandler, useCallback, useMemo, useState } from 'react';
-import { MatrixError, MsgType, Room } from 'matrix-js-sdk';
+import React, {
+  KeyboardEventHandler,
+  MouseEventHandler,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
+import { IContent, MatrixError, MsgType, Room } from 'matrix-js-sdk';
 import FocusTrap from 'focus-trap-react';
+import { isKeyHotkey } from 'is-hotkey';
 import {
   Avatar,
   Box,
   Button,
   Chip,
   Icon,
+  IconButton,
   Icons,
+  Line,
   Menu,
   MenuItem,
   PopOut,
   RectCords,
   Spinner,
   Text,
-  TextArea,
   color,
   config,
   toRem,
 } from 'folds';
+import {
+  CustomEditor,
+  Toolbar,
+  customHtmlEqualsPlainText,
+  isEmptyEditor,
+  getMentions,
+  resetEditor,
+  resetEditorHistory,
+  toMatrixCustomHTML,
+  toPlainText,
+  trimCustomHtml,
+  useEditor,
+} from '../../components/editor';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { useComposingCheck } from '../../hooks/useComposingCheck';
 import { AsyncStatus, useAsyncCallback } from '../../hooks/useAsyncCallback';
 import { useAlive } from '../../hooks/useAlive';
+import { useSetting } from '../../state/hooks/settings';
+import { settingsAtom } from '../../state/settings';
 import { useFeedRooms } from '../feed';
 import { RoomAvatar } from '../../components/room-avatar';
 import { nameInitials, millisecondsToMinutes } from '../../utils/common';
-import { getRoomAvatarUrl } from '../../utils/room';
+import { getMentionContent, getRoomAvatarUrl } from '../../utils/room';
 import { ErrorCode } from '../../cs-errorcode';
 import { stopPropagation } from '../../utils/keyboard';
 
@@ -37,8 +61,15 @@ type CreatePostFormProps = {
 export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps) {
   const mx = useMatrixClient();
   const alive = useAlive();
+  const editor = useEditor();
   const useAuthentication = useMediaAuthentication();
   const feedRoomIds = useFeedRooms();
+  const isComposing = useComposingCheck();
+
+  const [enterForNewline] = useSetting(settingsAtom, 'enterForNewline');
+  const [isMarkdown] = useSetting(settingsAtom, 'isMarkdown');
+  const [globalToolbar] = useSetting(settingsAtom, 'editorToolbar');
+  const [toolbar, setToolbar] = useState(globalToolbar);
 
   const feedRooms = useMemo(
     () =>
@@ -51,23 +82,66 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       feedRoomIds[0]
   );
   const selectedRoom = roomId ? mx.getRoom(roomId) : undefined;
-  const [text, setText] = useState('');
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
 
   const [createState, create] = useAsyncCallback<void, Error | MatrixError, []>(
     useCallback(async () => {
       if (!roomId) throw new Error('Select a room to share to');
-      const body = text.trim();
-      if (!body) throw new Error('Enter some content to share');
-      await mx.sendMessage(roomId, {
+      if (isEmptyEditor(editor)) throw new Error('Enter some content to share');
+
+      const plainText = toPlainText(editor.children, isMarkdown).trim();
+      if (plainText === '') throw new Error('Enter some content to share');
+      const customHtml = trimCustomHtml(
+        toMatrixCustomHTML(editor.children, {
+          allowTextFormatting: true,
+          allowBlockMarkdown: isMarkdown,
+          allowInlineMarkdown: isMarkdown,
+        })
+      );
+
+      const mentionData = getMentions(mx, roomId, editor);
+      const mMentions = getMentionContent(Array.from(mentionData.users), mentionData.room);
+
+      const content: IContent = {
         msgtype: MsgType.Text,
-        body,
+        body: plainText,
+        'm.mentions': mMentions,
         'm.post': true,
-      } as any);
-    }, [mx, roomId, text])
+      };
+      if (!customHtmlEqualsPlainText(customHtml, plainText)) {
+        content.format = 'org.matrix.custom.html';
+        content.formatted_body = customHtml;
+      }
+
+      await mx.sendMessage(roomId, content as any);
+      resetEditor(editor);
+      resetEditorHistory(editor);
+    }, [mx, roomId, editor, isMarkdown])
   );
   const loading = createState.status === AsyncStatus.Loading;
   const error = createState.status === AsyncStatus.Error ? createState.error : undefined;
+
+  const submit = useCallback(() => {
+    if (loading) return;
+    create().then(() => {
+      if (alive()) {
+        onCreate?.();
+      }
+    });
+  }, [loading, create, alive, onCreate]);
+
+  const handleKeyDown: KeyboardEventHandler = useCallback(
+    (evt) => {
+      if (
+        (isKeyHotkey('mod+enter', evt) || (!enterForNewline && isKeyHotkey('enter', evt))) &&
+        !isComposing(evt)
+      ) {
+        evt.preventDefault();
+        submit();
+      }
+    },
+    [submit, enterForNewline, isComposing]
+  );
 
   const handleOpenMenu: MouseEventHandler<HTMLButtonElement> = (evt) => {
     setMenuAnchor(evt.currentTarget.getBoundingClientRect());
@@ -76,16 +150,6 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   const handleRoomSelect = (id: string) => {
     setRoomId(id);
     setMenuAnchor(undefined);
-  };
-
-  const handleSubmit: FormEventHandler<HTMLFormElement> = (evt) => {
-    evt.preventDefault();
-    if (loading) return;
-    create().then(() => {
-      if (alive()) {
-        onCreate?.();
-      }
-    });
   };
 
   const renderRoomAvatar = (room: Room) => (
@@ -104,7 +168,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   );
 
   return (
-    <Box as="form" onSubmit={handleSubmit} grow="Yes" direction="Column" gap="500">
+    <Box direction="Column" gap="500">
       <Box shrink="No" direction="Column" gap="100">
         <Text size="L400">Share to</Text>
         <Chip
@@ -165,18 +229,31 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       </Box>
       <Box grow="Yes" shrink="No" direction="Column" gap="100">
         <Text size="L400">Content</Text>
-        <TextArea
-          name="postContent"
-          value={text}
-          onChange={(evt: React.ChangeEvent<HTMLTextAreaElement>) => setText(evt.target.value)}
+        <CustomEditor
+          editableName="CreatePost"
+          editor={editor}
           placeholder="Share something..."
-          size="500"
-          variant="SurfaceVariant"
-          radii="400"
-          rows={6}
-          autoFocus
-          required
-          disabled={loading}
+          onKeyDown={handleKeyDown}
+          after={
+            <IconButton
+              type="button"
+              variant="SurfaceVariant"
+              size="300"
+              radii="300"
+              onClick={() => setToolbar(!toolbar)}
+              aria-pressed={toolbar}
+            >
+              <Icon size="400" src={toolbar ? Icons.AlphabetUnderline : Icons.Alphabet} />
+            </IconButton>
+          }
+          bottom={
+            toolbar && (
+              <Box direction="Column">
+                <Line variant="SurfaceVariant" size="300" />
+                <Toolbar />
+              </Box>
+            )
+          }
         />
       </Box>
       {error && (
@@ -195,12 +272,13 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       )}
       <Box shrink="No" direction="Column" gap="200">
         <Button
-          type="submit"
+          type="button"
           size="500"
           variant="Primary"
           radii="400"
-          disabled={loading || !roomId || text.trim() === ''}
+          disabled={loading || !roomId}
           before={loading && <Spinner variant="Primary" fill="Solid" size="200" />}
+          onClick={submit}
         >
           <Text size="B500">Share</Text>
         </Button>
