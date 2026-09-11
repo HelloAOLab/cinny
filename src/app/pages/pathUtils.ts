@@ -23,6 +23,7 @@ import {
   SPACE_PATH,
   SPACE_ROOM_PATH,
   SPACE_SEARCH_PATH,
+  SPACE_FEED_PATH,
   CREATE_PATH,
 } from './paths';
 import { trimLeadingSlash, trimTrailingSlash } from '../utils/common';
@@ -131,6 +132,12 @@ export const getSpaceSearchPath = (spaceIdOrAlias: string): string => {
     spaceIdOrAlias: encodeURIComponent(spaceIdOrAlias),
   };
   return generatePath(SPACE_SEARCH_PATH, params);
+};
+export const getSpaceFeedPath = (spaceIdOrAlias: string): string => {
+  const params = {
+    spaceIdOrAlias: encodeURIComponent(spaceIdOrAlias),
+  };
+  return generatePath(SPACE_FEED_PATH, params);
 };
 export const getSpaceRoomPath = (
   spaceIdOrAlias: string,
