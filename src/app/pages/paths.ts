@@ -60,6 +60,7 @@ export const DIRECT_ROOM_PATH = `/direct/${_ROOM_PATH}`;
 export const SPACE_PATH = '/:spaceIdOrAlias/';
 export const SPACE_LOBBY_PATH = `/:spaceIdOrAlias/${_LOBBY_PATH}`;
 export const SPACE_SEARCH_PATH = `/:spaceIdOrAlias/${_SEARCH_PATH}`;
+export const SPACE_FEED_PATH = `/:spaceIdOrAlias/${_FEED_PATH}`;
 export const SPACE_ROOM_PATH = `/:spaceIdOrAlias/${_ROOM_PATH}`;
 
 export const _FEATURED_PATH = 'featured/';
