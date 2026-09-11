@@ -3,14 +3,20 @@ import React, {
   KeyboardEventHandler,
   MouseEventHandler,
   useCallback,
+  useMemo,
   useState,
 } from 'react';
 import { MatrixEvent, MsgType, RelationType, Room } from 'matrix-js-sdk';
 import { Box, Header, Icon, IconButton, Icons, Input, Scroll, Text, config } from 'folds';
+import { Opts as LinkifyOpts } from 'linkifyjs';
+import { HTMLReactParserOptions } from 'html-react-parser';
 import { useAtomValue } from 'jotai';
 import classNames from 'classnames';
 import * as css from './CommentsPanel.css';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
+import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
+import { useMentionClickHandler } from '../../../hooks/useMentionClickHandler';
+import { useSpoilerClickHandler } from '../../../hooks/useSpoilerClickHandler';
 import { useImagePackRooms } from '../../../hooks/useImagePackRooms';
 import { useRoomCreators } from '../../../hooks/useRoomCreators';
 import { usePowerLevels } from '../../../hooks/usePowerLevels';
@@ -21,10 +27,18 @@ import { useOpenUserRoomProfile } from '../../../state/hooks/userRoomProfile';
 import { useSetting } from '../../../state/hooks/settings';
 import { MessageLayout, MessageSpacing, settingsAtom } from '../../../state/settings';
 import { roomToParentsAtom } from '../../../state/room/roomToParents';
-import { getEventReactions, getMemberDisplayName } from '../../../utils/room';
+import {
+  factoryRenderLinkifyWithMention,
+  getReactCustomHtmlParser,
+  LINKIFY_OPTS,
+  makeMentionCustomProps,
+  renderMatrixMention,
+} from '../../../plugins/react-custom-html-parser';
+import { getEditedEvent, getEventReactions, getMemberDisplayName } from '../../../utils/room';
 import { getMxIdLocalPart } from '../../../utils/matrix';
-import { MessageEvent } from '../../../../types/matrix/room';
+import { GetContentCallback, MessageEvent } from '../../../../types/matrix/room';
 import { Message, Reactions } from '../../room/message';
+import { RenderMessageContent } from '../../../components/RenderMessageContent';
 import { ContainerColor } from '../../../styles/ContainerColor.css';
 
 const noop = () => undefined;
@@ -44,6 +58,10 @@ type CommentProps = {
   messageSpacing: MessageSpacing;
   hour24Clock: boolean;
   dateFormatString: string;
+  mediaAutoLoad?: boolean;
+  urlPreview?: boolean;
+  linkifyOpts: LinkifyOpts;
+  htmlReactParserOptions: HTMLReactParserOptions;
 };
 function Comment({
   room,
@@ -60,12 +78,27 @@ function Comment({
   messageSpacing,
   hour24Clock,
   dateFormatString,
+  mediaAutoLoad,
+  urlPreview,
+  linkifyOpts,
+  htmlReactParserOptions,
 }: CommentProps) {
   const mEventId = mEvent.getId();
   const reactionRelations = mEventId
     ? getEventReactions(room.getUnfilteredTimelineSet(), mEventId)
     : undefined;
   const hasReactions = (reactionRelations?.getSortedAnnotationsByKey()?.length ?? 0) > 0;
+
+  const editedEvent = mEventId
+    ? getEditedEvent(mEventId, mEvent, room.getUnfilteredTimelineSet())
+    : undefined;
+  const getContent = useCallback(
+    () => editedEvent?.getContent()['m.new_content'] ?? mEvent.getContent(),
+    [editedEvent, mEvent]
+  ) as GetContentCallback;
+  const senderId = mEvent.getSender() ?? '';
+  const senderDisplayName =
+    getMemberDisplayName(room, senderId) ?? getMxIdLocalPart(senderId) ?? senderId;
 
   return (
     <Message
@@ -102,7 +135,19 @@ function Comment({
       hideReadReceipts
       hour24Clock={hour24Clock}
       dateFormatString={dateFormatString}
-    />
+    >
+      <RenderMessageContent
+        displayName={senderDisplayName}
+        msgType={mEvent.getContent().msgtype ?? ''}
+        ts={mEvent.getTs()}
+        edited={!!editedEvent}
+        getContent={getContent}
+        mediaAutoLoad={mediaAutoLoad}
+        urlPreview={urlPreview}
+        htmlReactParserOptions={htmlReactParserOptions}
+        linkifyOpts={linkifyOpts}
+      />
+    </Message>
   );
 }
 
@@ -121,6 +166,32 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
   const [messageSpacing] = useSetting(settingsAtom, 'messageSpacing');
   const [hour24Clock] = useSetting(settingsAtom, 'hour24Clock');
   const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
+  const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
+  const [urlPreview] = useSetting(settingsAtom, 'urlPreview');
+
+  const useAuthentication = useMediaAuthentication();
+  const mentionClickHandler = useMentionClickHandler(room.roomId);
+  const spoilerClickHandler = useSpoilerClickHandler();
+
+  const linkifyOpts = useMemo<LinkifyOpts>(
+    () => ({
+      ...LINKIFY_OPTS,
+      render: factoryRenderLinkifyWithMention((href) =>
+        renderMatrixMention(mx, room.roomId, href, makeMentionCustomProps(mentionClickHandler))
+      ),
+    }),
+    [mx, room, mentionClickHandler]
+  );
+  const htmlReactParserOptions = useMemo<HTMLReactParserOptions>(
+    () =>
+      getReactCustomHtmlParser(mx, room.roomId, {
+        linkifyOpts,
+        useAuthentication,
+        handleSpoilerClick: spoilerClickHandler,
+        handleMentionClick: mentionClickHandler,
+      }),
+    [mx, room, linkifyOpts, mentionClickHandler, spoilerClickHandler, useAuthentication]
+  );
 
   const roomToParents = useAtomValue(roomToParentsAtom);
   const imagePackRooms = useImagePackRooms(room.roomId, roomToParents);
@@ -237,6 +308,10 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
                 messageSpacing={messageSpacing}
                 hour24Clock={hour24Clock}
                 dateFormatString={dateFormatString}
+                mediaAutoLoad={mediaAutoLoad}
+                urlPreview={urlPreview}
+                linkifyOpts={linkifyOpts}
+                htmlReactParserOptions={htmlReactParserOptions}
               />
             ))}
           </Box>
