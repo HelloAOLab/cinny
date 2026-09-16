@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { useAtomValue } from 'jotai';
-import { IContent, MatrixError, MsgType, Room } from 'matrix-js-sdk';
+import { IContent, JoinRule, MatrixError, MsgType, Room } from 'matrix-js-sdk';
 import FocusTrap from 'focus-trap-react';
 import { isKeyHotkey } from 'is-hotkey';
 import {
@@ -110,6 +110,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   const selectedSpace = spaceId ? mx.getRoom(spaceId) : undefined;
   const postsRoomId = spacesWithPostsRoom.find((space) => space.spaceId === spaceId)?.postsRoomId;
   const selectedRoom = postsRoomId ? mx.getRoom(postsRoomId) : undefined;
+  const isPublicRoom = selectedRoom?.getJoinRule() === JoinRule.Public;
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
 
   const [selectedFiles, setSelectedFiles] = useState<TUploadItem[]>([]);
@@ -376,6 +377,13 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
             </FocusTrap>
           }
         />
+        {selectedRoom && (
+          <Text size="T200" priority="300">
+            {isPublicRoom
+              ? 'This will be shared publicly'
+              : 'This will only be visible to members of this room'}
+          </Text>
+        )}
       </Box>
       <Box grow="Yes" shrink="No" direction="Column" gap="100">
         <Text size="L400">Content</Text>
