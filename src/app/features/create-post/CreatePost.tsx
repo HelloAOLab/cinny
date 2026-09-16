@@ -55,7 +55,7 @@ import {
   roomUploadAtomFamily,
 } from '../../state/room/roomInputDrafts';
 import { UploadCardRenderer } from '../../components/upload-card';
-import { useFeedRooms } from '../feed';
+import { useSpacesWithPostsRoom } from '../feed';
 import {
   getAudioMsgContent,
   getFileMsgContent,
@@ -85,24 +85,31 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
   const alive = useAlive();
   const editor = useEditor();
   const useAuthentication = useMediaAuthentication();
-  const feedRoomIds = useFeedRooms();
+  const spacesWithPostsRoom = useSpacesWithPostsRoom();
   const isComposing = useComposingCheck();
 
   const [isMarkdown] = useSetting(settingsAtom, 'isMarkdown');
   const [globalToolbar] = useSetting(settingsAtom, 'editorToolbar');
   const [toolbar, setToolbar] = useState(globalToolbar);
 
-  const feedRooms = useMemo(
+  const spaces = useMemo(
     () =>
-      feedRoomIds.map((roomId) => mx.getRoom(roomId)).filter((room): room is Room => room !== null),
-    [mx, feedRoomIds]
+      spacesWithPostsRoom
+        .map(({ spaceId }) => mx.getRoom(spaceId))
+        .filter((room): room is Room => room !== null),
+    [mx, spacesWithPostsRoom]
   );
 
-  const [roomId, setRoomId] = useState<string | undefined>(
-    (defaultRoomId && feedRoomIds.includes(defaultRoomId) ? defaultRoomId : undefined) ??
-      feedRoomIds[0]
+  const [spaceId, setSpaceId] = useState<string | undefined>(
+    (defaultRoomId &&
+      spacesWithPostsRoom.find(
+        (space) => space.spaceId === defaultRoomId || space.postsRoomId === defaultRoomId
+      )?.spaceId) ??
+      spacesWithPostsRoom[0]?.spaceId
   );
-  const selectedRoom = roomId ? mx.getRoom(roomId) : undefined;
+  const selectedSpace = spaceId ? mx.getRoom(spaceId) : undefined;
+  const postsRoomId = spacesWithPostsRoom.find((space) => space.spaceId === spaceId)?.postsRoomId;
+  const selectedRoom = postsRoomId ? mx.getRoom(postsRoomId) : undefined;
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
 
   const [selectedFiles, setSelectedFiles] = useState<TUploadItem[]>([]);
@@ -162,7 +169,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
 
   const sendAttachments = useCallback(
     async (successUploads: UploadSuccess[], caption?: { body: string; formattedBody?: string }) => {
-      if (!roomId) return;
+      if (!postsRoomId) return;
       const contentsPromises = successUploads.map(async (upload) => {
         const fileItem = selectedFiles.find((f) => f.file === upload.file);
         if (!fileItem) throw new Error('Broken upload');
@@ -184,19 +191,21 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
         }
       }
       await Promise.all(
-        contents.map((content) => mx.sendMessage(roomId, { ...content, 'm.post': true } as any))
+        contents.map((content) =>
+          mx.sendMessage(postsRoomId, { ...content, 'm.post': true } as any)
+        )
       );
       successUploads.forEach((upload) => roomUploadAtomFamily.remove(upload.file));
       setSelectedFiles((items) =>
         items.filter((item) => !successUploads.some((u) => u.file === item.file))
       );
     },
-    [mx, roomId, selectedFiles]
+    [mx, postsRoomId, selectedFiles]
   );
 
   const [createState, create] = useAsyncCallback<void, Error | MatrixError, []>(
     useCallback(async () => {
-      if (!roomId) throw new Error('Select a room to share to');
+      if (!postsRoomId) throw new Error('Select a space to share to');
 
       const plainText = toPlainText(editor.children, isMarkdown).trim();
       const hasText = plainText !== '';
@@ -230,7 +239,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       }
 
       if (hasText && !mergeCaptionIntoAttachment) {
-        const mentionData = getMentions(mx, roomId, editor);
+        const mentionData = getMentions(mx, postsRoomId, editor);
         const mMentions = getMentionContent(Array.from(mentionData.users), mentionData.room);
 
         const content: IContent = {
@@ -244,12 +253,21 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           content.formatted_body = customHtml;
         }
 
-        await mx.sendMessage(roomId, content as any);
+        await mx.sendMessage(postsRoomId, content as any);
       }
 
       resetEditor(editor);
       resetEditorHistory(editor);
-    }, [mx, roomId, editor, isMarkdown, selectedFiles, uploads, uploadsPending, sendAttachments])
+    }, [
+      mx,
+      postsRoomId,
+      editor,
+      isMarkdown,
+      selectedFiles,
+      uploads,
+      uploadsPending,
+      sendAttachments,
+    ])
   );
   const loading = createState.status === AsyncStatus.Loading;
   const error = createState.status === AsyncStatus.Error ? createState.error : undefined;
@@ -279,8 +297,8 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
     setMenuAnchor(evt.currentTarget.getBoundingClientRect());
   };
 
-  const handleRoomSelect = (id: string) => {
-    setRoomId(id);
+  const handleSpaceSelect = (id: string) => {
+    setSpaceId(id);
     setMenuAnchor(undefined);
   };
 
@@ -307,13 +325,13 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           type="button"
           variant="SurfaceVariant"
           radii="400"
-          before={selectedRoom ? renderRoomAvatar(selectedRoom) : undefined}
+          before={selectedSpace ? renderRoomAvatar(selectedSpace) : undefined}
           after={<Icon size="100" src={Icons.ChevronBottom} />}
           onClick={handleOpenMenu}
           disabled={loading}
         >
           <Text size="T400" truncate>
-            {selectedRoom ? selectedRoom.name : 'Select a room'}
+            {selectedSpace ? selectedSpace.name : 'Select a space'}
           </Text>
         </Chip>
         <PopOut
@@ -332,24 +350,24 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
             >
               <Menu style={{ maxHeight: '30vh', width: toRem(220), overflowY: 'auto' }}>
                 <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
-                  {feedRooms.length === 0 && (
+                  {spaces.length === 0 && (
                     <Text size="T300" style={{ padding: config.space.S200 }}>
-                      No rooms available
+                      No spaces available
                     </Text>
                   )}
-                  {feedRooms.map((room) => (
+                  {spaces.map((space) => (
                     <MenuItem
-                      key={room.roomId}
+                      key={space.roomId}
                       type="button"
                       size="300"
                       radii="300"
-                      variant={room.roomId === roomId ? 'Success' : 'Surface'}
-                      aria-pressed={room.roomId === roomId}
-                      before={renderRoomAvatar(room)}
-                      onClick={() => handleRoomSelect(room.roomId)}
+                      variant={space.roomId === spaceId ? 'Success' : 'Surface'}
+                      aria-pressed={space.roomId === spaceId}
+                      before={renderRoomAvatar(space)}
+                      onClick={() => handleSpaceSelect(space.roomId)}
                     >
                       <Text truncate size="T400">
-                        {room.name}
+                        {space.name}
                       </Text>
                     </MenuItem>
                   ))}
@@ -388,7 +406,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
               size="300"
               radii="300"
               onClick={() => pickFile('*')}
-              disabled={!roomId}
+              disabled={!postsRoomId}
               aria-label="Attach media or files"
             >
               <Icon src={Icons.PlusCircle} />
@@ -439,7 +457,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           size="500"
           variant="Primary"
           radii="400"
-          disabled={loading || !roomId || uploadsPending}
+          disabled={loading || !postsRoomId || uploadsPending}
           before={loading && <Spinner variant="Primary" fill="Solid" size="200" />}
           onClick={submit}
         >
