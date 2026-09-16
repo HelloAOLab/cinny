@@ -38,12 +38,18 @@ import {
   NavItemContent,
   NavLink,
 } from '../../../components/nav';
-import { getSpaceLobbyPath, getSpaceRoomPath, getSpaceSearchPath } from '../../pathUtils';
+import {
+  getSpaceLobbyPath,
+  getSpaceRoomPath,
+  getSpaceSearchPath,
+  getSpaceFeedPath,
+} from '../../pathUtils';
 import { getCanonicalAliasOrRoomId, isRoomAlias } from '../../../utils/matrix';
 import { useSelectedRoom } from '../../../hooks/router/useSelectedRoom';
 import {
   useSpaceLobbySelected,
   useSpaceSearchSelected,
+  useSpaceFeedSelected,
 } from '../../../hooks/router/useSelectedSpace';
 import { useSpace } from '../../../hooks/useSpace';
 import { VirtualTile } from '../../../components/virtualizer';
@@ -391,6 +397,7 @@ export function Space() {
   const selectedRoomId = useSelectedRoom();
   const lobbySelected = useSpaceLobbySelected(spaceIdOrAlias);
   const searchSelected = useSpaceSearchSelected(spaceIdOrAlias);
+  const feedSelected = useSpaceFeedSelected(spaceIdOrAlias);
   const callEmbed = useCallEmbed();
 
   const [closedCategories, setClosedCategories] = useAtom(useClosedNavCategoriesAtom());
@@ -477,6 +484,22 @@ export function Space() {
                     <Box as="span" grow="Yes">
                       <Text as="span" size="Inherit" truncate>
                         Message Search
+                      </Text>
+                    </Box>
+                  </Box>
+                </NavItemContent>
+              </NavLink>
+            </NavItem>
+            <NavItem variant="Background" radii="400" aria-selected={feedSelected}>
+              <NavLink to={getSpaceFeedPath(getCanonicalAliasOrRoomId(mx, space.roomId))}>
+                <NavItemContent>
+                  <Box as="span" grow="Yes" alignItems="Center" gap="200">
+                    <Avatar size="200" radii="400">
+                      <Icon src={Icons.Photo} size="100" filled={feedSelected} />
+                    </Avatar>
+                    <Box as="span" grow="Yes">
+                      <Text as="span" size="Inherit" truncate>
+                        Feed
                       </Text>
                     </Box>
                   </Box>
