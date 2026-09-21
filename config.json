@@ -23,7 +23,7 @@
   },
 
   "registrationBot": {
-    "userId": "@botty:matrix.ao.bot",
+    "userId": "@bot-registration:matrix.ao.bot",
     "homeserverId": "matrix-ao-bot"
   }
 }
