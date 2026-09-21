@@ -4,12 +4,14 @@
  *
  * The bot answers a `115.registration.get_link` request with a
  * `115.registration.link_generated` response, both of which travel as ordinary room
- * events inside a private, unencrypted DM between the requester and the bot — it
- * refuses to answer anywhere else, since a minted token is a secret. See that PR's
- * README ("Registration links" section) for the full wire format.
+ * events inside a private, E2EE DM between the requester and the bot — it refuses to
+ * answer anywhere else, since a minted token is a secret. See that PR's README
+ * ("Registration links" section) for the full wire format.
  */
 import {
   MatrixClient,
+  MatrixEvent,
+  MatrixEventEvent,
   Preset,
   Room,
   RoomEvent,
@@ -20,6 +22,7 @@ import {
 } from 'matrix-js-sdk';
 import { addRoomIdToMDirect } from '../utils/matrix';
 import { Membership } from '../../types/matrix/room';
+import { createRoomEncryptionState } from '../components/create-room/utils';
 
 export const EVENT_REGISTRATION_GET_LINK = '115.registration.get_link';
 export const EVENT_REGISTRATION_LINK_GENERATED = '115.registration.link_generated';
@@ -114,8 +117,8 @@ export const parseRegistrationLinkResponse = (
 
 /**
  * An existing room usable to talk to the registration bot: just the bot and us,
- * joined, unencrypted. The bot refuses to answer in any other kind of room, so a
- * room that doesn't match this is not worth reusing.
+ * joined, E2EE. The bot refuses to answer in any other kind of room, so a room that
+ * doesn't match this is not worth reusing.
  */
 export const findBotDMRoom = (mx: MatrixClient, botUserId: string): Room | undefined =>
   mx
@@ -123,7 +126,7 @@ export const findBotDMRoom = (mx: MatrixClient, botUserId: string): Room | undef
     .find(
       (room) =>
         room.getMyMembership() === Membership.Join &&
-        !room.hasEncryptionStateEvent() &&
+        room.hasEncryptionStateEvent() &&
         room.getMembers().length <= 2 &&
         room.getMember(botUserId)?.membership === Membership.Join
     );
@@ -137,6 +140,7 @@ const getOrCreateBotDMRoomId = async (mx: MatrixClient, botUserId: string): Prom
     invite: [botUserId],
     visibility: Visibility.Private,
     preset: Preset.TrustedPrivateChat,
+    initial_state: [createRoomEncryptionState()],
   });
   await addRoomIdToMDirect(mx, result.room_id, botUserId);
   return result.room_id;
@@ -187,6 +191,10 @@ const waitForBotToJoin = (
  * The listener is attached before the request is sent (and buffers whatever it
  * sees) so a response that lands before we learn our own event's id — a race that
  * really can happen with a fast bot on a local homeserver — is not missed.
+ *
+ * The room is E2EE, so the response arrives on the timeline as `m.room.encrypted`
+ * and only exposes its real type/content once matrix-js-sdk finishes decrypting it
+ * asynchronously — an event still mid-decryption is held back until it does.
  */
 const sendAndAwaitResponse = (
   mx: MatrixClient,
@@ -202,6 +210,7 @@ const sendAndAwaitResponse = (
     let timer: ReturnType<typeof setTimeout>;
     let cleanup: () => void;
     const buffered: Buffered[] = [];
+    const decryptingListeners = new Map<MatrixEvent, () => void>();
 
     const finish = (action: () => void) => {
       if (settled) return;
@@ -210,8 +219,7 @@ const sendAndAwaitResponse = (
       action();
     };
 
-    const handleTimeline: RoomEventHandlerMap[RoomEvent.Timeline] = (event, room) => {
-      if (room?.roomId !== roomId) return;
+    const handleDecryptedEvent = (event: MatrixEvent) => {
       const type = event.getType();
       const eventContent = event.getContent();
       if (requestEventId === undefined) {
@@ -222,9 +230,28 @@ const sendAndAwaitResponse = (
       finish(() => resolve(parseRegistrationLinkResponse(eventContent)));
     };
 
+    const handleTimeline: RoomEventHandlerMap[RoomEvent.Timeline] = (event, room) => {
+      if (room?.roomId !== roomId) return;
+      if (event.isEncrypted() && event.getClearContent() === null) {
+        const onDecrypted = () => {
+          decryptingListeners.delete(event);
+          if (settled) return;
+          handleDecryptedEvent(event);
+        };
+        decryptingListeners.set(event, onDecrypted);
+        event.once(MatrixEventEvent.Decrypted, onDecrypted);
+        return;
+      }
+      handleDecryptedEvent(event);
+    };
+
     cleanup = () => {
       clearTimeout(timer);
       mx.removeListener(RoomEvent.Timeline, handleTimeline);
+      decryptingListeners.forEach((listener, event) =>
+        event.off(MatrixEventEvent.Decrypted, listener)
+      );
+      decryptingListeners.clear();
     };
 
     timer = setTimeout(() => {
