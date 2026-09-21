@@ -20,5 +20,10 @@
   "hashRouter": {
     "enabled": false,
     "basename": "/"
+  },
+
+  "registrationBot": {
+    "userId": "@botty:matrix.ao.bot",
+    "homeserverId": "matrix.ao.bot"
   }
 }
