@@ -24,6 +24,6 @@
 
   "registrationBot": {
     "userId": "@botty:matrix.ao.bot",
-    "homeserverId": "matrix.ao.bot"
+    "homeserverId": "https://matrix.ao.bot"
   }
 }
