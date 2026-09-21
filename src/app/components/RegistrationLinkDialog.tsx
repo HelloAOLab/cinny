@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import FocusTrap from 'focus-trap-react';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   Dialog,
   Overlay,
@@ -102,6 +103,17 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                   >
                     <Text size="B400">{copied ? 'Copied!' : 'Copy Link'}</Text>
                   </Button>
+                  <Box justifyContent="Center" style={{ padding: config.space.S200 }}>
+                    <Box
+                      style={{
+                        background: color.Surface.Container,
+                        padding: config.space.S200,
+                        borderRadius: config.radii.R400,
+                      }}
+                    >
+                      <QRCodeSVG value={result.link} size={200} marginSize={0} />
+                    </Box>
+                  </Box>
                 </Box>
               )}
               <Box direction="Column" gap="200">
