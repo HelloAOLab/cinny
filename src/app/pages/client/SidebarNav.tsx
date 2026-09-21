@@ -13,6 +13,7 @@ import {
   SpaceTabs,
   InboxTab,
   ExploreTab,
+  InviteTab,
   SettingsTab,
   UnverifiedTab,
   SearchTab,
@@ -46,6 +47,7 @@ export function SidebarNav() {
               <SearchTab />
               <UnverifiedTab />
               <InboxTab />
+              <InviteTab />
               <SettingsTab />
             </SidebarStack>
           </>

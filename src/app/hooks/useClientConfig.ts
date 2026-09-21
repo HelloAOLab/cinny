@@ -18,6 +18,12 @@ export type ClientConfig = {
   };
 
   hashRouter?: HashRouterConfig;
+
+  registrationBot?: {
+    userId: string;
+    homeserverId: string;
+    clientId?: string;
+  };
 };
 
 const ClientConfigContext = createContext<ClientConfig | null>(null);
