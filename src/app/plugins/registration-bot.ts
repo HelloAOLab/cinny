@@ -4,9 +4,9 @@
  *
  * The bot answers a `115.registration.get_link` request with a
  * `115.registration.link_generated` response, both of which travel as ordinary room
- * events inside a private, unencrypted DM between the requester and the bot — it
- * refuses to answer anywhere else, since a minted token is a secret. See that PR's
- * README ("Registration links" section) for the full wire format.
+ * events inside a private, E2EE DM between the requester and the bot — it refuses to
+ * answer anywhere else, since a minted token is a secret. See that PR's README
+ * ("Registration links" section) for the full wire format.
  */
 import {
   MatrixClient,
@@ -20,6 +20,7 @@ import {
 } from 'matrix-js-sdk';
 import { addRoomIdToMDirect } from '../utils/matrix';
 import { Membership } from '../../types/matrix/room';
+import { createRoomEncryptionState } from '../components/create-room/utils';
 
 export const EVENT_REGISTRATION_GET_LINK = '115.registration.get_link';
 export const EVENT_REGISTRATION_LINK_GENERATED = '115.registration.link_generated';
@@ -114,8 +115,8 @@ export const parseRegistrationLinkResponse = (
 
 /**
  * An existing room usable to talk to the registration bot: just the bot and us,
- * joined, unencrypted. The bot refuses to answer in any other kind of room, so a
- * room that doesn't match this is not worth reusing.
+ * joined, E2EE. The bot refuses to answer in any other kind of room, so a room that
+ * doesn't match this is not worth reusing.
  */
 export const findBotDMRoom = (mx: MatrixClient, botUserId: string): Room | undefined =>
   mx
@@ -123,7 +124,7 @@ export const findBotDMRoom = (mx: MatrixClient, botUserId: string): Room | undef
     .find(
       (room) =>
         room.getMyMembership() === Membership.Join &&
-        !room.hasEncryptionStateEvent() &&
+        room.hasEncryptionStateEvent() &&
         room.getMembers().length <= 2 &&
         room.getMember(botUserId)?.membership === Membership.Join
     );
@@ -137,6 +138,7 @@ const getOrCreateBotDMRoomId = async (mx: MatrixClient, botUserId: string): Prom
     invite: [botUserId],
     visibility: Visibility.Private,
     preset: Preset.TrustedPrivateChat,
+    initial_state: [createRoomEncryptionState()],
   });
   await addRoomIdToMDirect(mx, result.room_id, botUserId);
   return result.room_id;
