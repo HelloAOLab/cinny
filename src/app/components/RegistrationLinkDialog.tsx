@@ -66,6 +66,8 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
   );
 
   const loading = linkState.status === AsyncStatus.Loading;
+  const clientsLoading =
+    clientsState.status === AsyncStatus.Idle || clientsState.status === AsyncStatus.Loading;
   const result = linkState.status === AsyncStatus.Success ? linkState.data : undefined;
 
   const handleCopy = () => {
@@ -168,7 +170,7 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                   <Button
                     variant="Primary"
                     onClick={getLink}
-                    disabled={loading}
+                    disabled={loading || clientsLoading}
                     before={loading && <Spinner variant="Primary" fill="Solid" size="200" />}
                   >
                     <Text size="B400">{loading ? 'Getting Link…' : 'Get Registration Link'}</Text>
