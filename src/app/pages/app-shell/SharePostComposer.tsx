@@ -3,7 +3,15 @@ import FocusTrap from 'focus-trap-react';
 import { CreatePostForm } from '../../features/create-post';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
 import { stopPropagation } from '../../utils/keyboard';
+import { LightTheme } from '../../hooks/useTheme';
 import * as css from './SharePostComposer.css';
+
+// CreatePostForm is shared with the desktop composer and styles itself
+// with folds' theme tokens, which follow the user's selected app theme
+// (light/dark/etc). This page's own chrome is always light to match the
+// rest of /app, so the form is forced to the light theme too - otherwise
+// a dark-theme user sees a light page with dark form controls inside it.
+const LIGHT_THEME_CLASS_NAME = LightTheme.classNames.join(' ');
 
 const CLOSE_ICON = (
   <svg
@@ -60,7 +68,7 @@ export function SharePostComposer({
           <span className={css.HeaderTitle}>New Post</span>
           <div className={css.HeaderSpacer} />
         </div>
-        <div className={css.Body}>
+        <div className={`${css.Body} ${LIGHT_THEME_CLASS_NAME}`}>
           <CreatePostForm
             pickerMode="space"
             defaultSpaceId={defaultSpaceId}
