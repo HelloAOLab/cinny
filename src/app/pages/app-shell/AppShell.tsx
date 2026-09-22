@@ -9,6 +9,7 @@ import { allRoomsAtom } from '../../state/room-list/roomList';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { nameInitials } from '../../utils/common';
 import { CommunitiesDrawer } from './CommunitiesDrawer';
+import { AccountMenu } from './AccountMenu';
 import * as css from './AppShell.css';
 
 const TABS = ['All', 'Prayer', 'Praise', 'Baptisms', 'Salvation'];
@@ -18,6 +19,7 @@ export function AppShell() {
   const useAuthentication = useMediaAuthentication();
   const { communityIdOrAlias } = useParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const joinedCommunityIds = useSpaces(mx, allRoomsAtom);
   const joinedCommunities = joinedCommunityIds
@@ -83,13 +85,28 @@ export function AppShell() {
             <path d="m3.5 7 8.5 6 8.5-6" />
           </svg>
         </button>
-        <span className={css.UserAvatar}>
-          {userAvatarUrl ? (
-            <img src={userAvatarUrl} alt="" width={36} height={36} />
-          ) : (
-            nameInitials(profile.displayName ?? userId, 2)
-          )}
-        </span>
+        <div className={css.AvatarWrapper}>
+          <button
+            type="button"
+            aria-label="Account menu"
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
+            className={css.UserAvatarButton}
+            onClick={() => setAccountMenuOpen((open) => !open)}
+          >
+            {userAvatarUrl ? (
+              <img src={userAvatarUrl} alt="" width={36} height={36} />
+            ) : (
+              nameInitials(profile.displayName ?? userId, 2)
+            )}
+          </button>
+          <AccountMenu
+            open={accountMenuOpen}
+            displayName={profile.displayName}
+            userId={userId}
+            onClose={() => setAccountMenuOpen(false)}
+          />
+        </div>
       </header>
 
       <nav className={css.Tabs}>

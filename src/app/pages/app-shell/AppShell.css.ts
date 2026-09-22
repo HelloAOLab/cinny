@@ -39,7 +39,12 @@ export const HeaderSpacer = style({
   flexGrow: 1,
 });
 
-export const UserAvatar = style({
+export const AvatarWrapper = style({
+  position: 'relative',
+  flexShrink: 0,
+});
+
+export const UserAvatarButton = style({
   width: '36px',
   height: '36px',
   borderRadius: '50%',
@@ -51,7 +56,9 @@ export const UserAvatar = style({
   fontWeight: 700,
   fontSize: '13px',
   overflow: 'hidden',
-  flexShrink: 0,
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
 });
 
 export const Tabs = style({
