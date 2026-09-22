@@ -56,6 +56,7 @@ import {
 } from '../../state/room/roomInputDrafts';
 import { UploadCardRenderer } from '../../components/upload-card';
 import { useFeedRooms } from '../feed';
+import { applyPostSharing, PostSharingLevel } from './postSharing';
 import {
   getAudioMsgContent,
   getFileMsgContent,
@@ -78,9 +79,16 @@ import { KeySymbol } from '../../utils/key-symbol';
 
 type CreatePostFormProps = {
   defaultRoomId?: string;
+  sharing?: PostSharingLevel;
+  sharingMedia?: PostSharingLevel;
   onCreate?: () => void;
 };
-export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps) {
+export function CreatePostForm({
+  defaultRoomId,
+  sharing,
+  sharingMedia,
+  onCreate,
+}: CreatePostFormProps) {
   const mx = useMatrixClient();
   const alive = useAlive();
   const editor = useEditor();
@@ -184,14 +192,16 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
         }
       }
       await Promise.all(
-        contents.map((content) => mx.sendMessage(roomId, { ...content, 'm.post': true } as any))
+        contents.map((content) =>
+          mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any)
+        )
       );
       successUploads.forEach((upload) => roomUploadAtomFamily.remove(upload.file));
       setSelectedFiles((items) =>
         items.filter((item) => !successUploads.some((u) => u.file === item.file))
       );
     },
-    [mx, roomId, selectedFiles]
+    [mx, roomId, selectedFiles, sharing, sharingMedia]
   );
 
   const [createState, create] = useAsyncCallback<void, Error | MatrixError, []>(
@@ -237,19 +247,29 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           msgtype: MsgType.Text,
           body: plainText,
           'm.mentions': mMentions,
-          'm.post': true,
         };
         if (customHtml) {
           content.format = 'org.matrix.custom.html';
           content.formatted_body = customHtml;
         }
 
-        await mx.sendMessage(roomId, content as any);
+        await mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any);
       }
 
       resetEditor(editor);
       resetEditorHistory(editor);
-    }, [mx, roomId, editor, isMarkdown, selectedFiles, uploads, uploadsPending, sendAttachments])
+    }, [
+      mx,
+      roomId,
+      editor,
+      isMarkdown,
+      selectedFiles,
+      uploads,
+      uploadsPending,
+      sendAttachments,
+      sharing,
+      sharingMedia,
+    ])
   );
   const loading = createState.status === AsyncStatus.Loading;
   const error = createState.status === AsyncStatus.Error ? createState.error : undefined;

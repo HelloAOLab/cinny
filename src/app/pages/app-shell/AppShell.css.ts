@@ -112,6 +112,13 @@ export const ShareFab = style({
   fontSize: '16px',
   boxShadow: '0 8px 20px rgba(21, 150, 206, 0.4)',
   cursor: 'pointer',
+  selectors: {
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'default',
+      boxShadow: 'none',
+    },
+  },
 });
 
 export const BottomNav = style({
