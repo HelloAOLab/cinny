@@ -32,7 +32,12 @@ export function AppFeedScreen() {
   return (
     <div className={css.Posts}>
       {posts.map((post) => (
-        <AppPostCard key={post.event.getId()} room={post.room} event={post.event} />
+        <AppPostCard
+          key={post.event.getId()}
+          room={post.room}
+          event={post.event}
+          communityName={community.name}
+        />
       ))}
     </div>
   );

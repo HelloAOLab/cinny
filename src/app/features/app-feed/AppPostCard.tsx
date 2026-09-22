@@ -66,9 +66,10 @@ const OPTIONS_ICON = (
 type AppPostCardProps = {
   room: Room;
   event: MatrixEvent;
+  communityName: string;
 };
 
-export function AppPostCard({ room, event }: AppPostCardProps) {
+export function AppPostCard({ room, event, communityName }: AppPostCardProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
@@ -127,7 +128,7 @@ export function AppPostCard({ room, event }: AppPostCardProps) {
           )}
         </span>
         <div className={css.CardHeaderText}>
-          <div className={css.RoomName}>{room.name}</div>
+          <div className={css.RoomName}>{communityName}</div>
           <div className={css.SenderLine}>
             {displayName} · {relativeTime(event.getTs())}
           </div>
