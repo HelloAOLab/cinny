@@ -30,6 +30,7 @@ import {
   _FEED_PATH,
   _SERVER_PATH,
   CREATE_PATH,
+  APP_PATH,
 } from './paths';
 import {
   getAppPathFromHref,
@@ -52,6 +53,8 @@ import {
   SpaceFeed,
 } from './client/space';
 import { Explore, FeaturedRooms, PublicRooms } from './client/explore';
+import { AppShell, AppIndexRedirect, RouteCommunityProvider } from './app-shell';
+import { AppFeedScreen } from '../features/app-feed';
 import { Notifications, Inbox, Invites } from './client/inbox';
 import { setAfterLoginRedirectPath } from './afterLoginRedirectPath';
 import { Room } from '../features/room';
@@ -218,6 +221,17 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
               <DirectRouteRoomProvider>
                 <Room />
               </DirectRouteRoomProvider>
+            }
+          />
+        </Route>
+        <Route path={APP_PATH} element={<AppShell />}>
+          <Route index element={<AppIndexRedirect />} />
+          <Route
+            path=":communityIdOrAlias/"
+            element={
+              <RouteCommunityProvider>
+                <AppFeedScreen />
+              </RouteCommunityProvider>
             }
           />
         </Route>

@@ -12,6 +12,8 @@ import {
   HOME_ROOM_PATH,
   HOME_SEARCH_PATH,
   HOME_FEED_PATH,
+  APP_PATH,
+  APP_COMMUNITY_PATH,
   LOGIN_PATH,
   INBOX_INVITES_PATH,
   INBOX_NOTIFICATIONS_PATH,
@@ -167,3 +169,11 @@ export const getCreatePath = (): string => CREATE_PATH;
 export const getInboxPath = (): string => INBOX_PATH;
 export const getInboxNotificationsPath = (): string => INBOX_NOTIFICATIONS_PATH;
 export const getInboxInvitesPath = (): string => INBOX_INVITES_PATH;
+
+export const getAppPath = (): string => APP_PATH;
+export const getAppCommunityPath = (communityIdOrAlias: string): string => {
+  const params = {
+    communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
+  };
+  return generatePath(APP_COMMUNITY_PATH, params);
+};
