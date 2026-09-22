@@ -6,14 +6,13 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useSpaces } from '../../state/hooks/roomList';
 import { allRoomsAtom } from '../../state/room-list/roomList';
-import { useOpenCreatePostModal } from '../../state/hooks/createPostModal';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { nameInitials } from '../../utils/common';
-import { usePostsRoom } from '../../features/app-feed';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
 import { CommunitiesDrawer } from './CommunitiesDrawer';
 import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
+import { SharePostComposer } from './SharePostComposer';
 import * as css from './AppShell.css';
 
 const TABS = ['All', 'Prayer', 'Praise', 'Baptisms', 'Salvation'];
@@ -25,7 +24,10 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
-  const openCreatePostModal = useOpenCreatePostModal();
+  const [composerState, setComposerState] = useState<{
+    sharing: PostSharingLevel;
+    sharingMedia: PostSharingLevel;
+  }>();
 
   const joinedCommunityIds = useSpaces(mx, allRoomsAtom);
   const joinedCommunities = joinedCommunityIds
@@ -33,12 +35,10 @@ export function AppShell() {
     .filter((room): room is NonNullable<typeof room> => !!room);
 
   const community = communityIdOrAlias ? mx.getRoom(communityIdOrAlias) : undefined;
-  const postsRoom = usePostsRoom(community);
 
   const handleShareComplete = (sharing: PostSharingLevel, sharingMedia: PostSharingLevel) => {
     setShareFlowOpen(false);
-    if (!postsRoom) return;
-    openCreatePostModal({ roomId: postsRoom.roomId, sharing, sharingMedia });
+    setComposerState({ sharing, sharingMedia });
   };
 
   const userId = mx.getSafeUserId();
@@ -143,7 +143,7 @@ export function AppShell() {
       <button
         type="button"
         className={css.ShareFab}
-        disabled={!postsRoom}
+        disabled={joinedCommunities.length === 0}
         onClick={() => setShareFlowOpen(true)}
       >
         <svg
@@ -253,6 +253,14 @@ export function AppShell() {
         open={shareFlowOpen}
         onClose={() => setShareFlowOpen(false)}
         onComplete={handleShareComplete}
+      />
+
+      <SharePostComposer
+        open={!!composerState}
+        defaultSpaceId={community?.roomId}
+        sharing={composerState?.sharing}
+        sharingMedia={composerState?.sharingMedia}
+        onClose={() => setComposerState(undefined)}
       />
     </div>
   );

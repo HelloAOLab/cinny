@@ -66,12 +66,7 @@ function CreatePostModal({ state }: CreatePostModalProps) {
                   direction="Column"
                   gap="500"
                 >
-                  <CreatePostForm
-                    defaultRoomId={state.roomId}
-                    sharing={state.sharing}
-                    sharingMedia={state.sharingMedia}
-                    onCreate={closeDialog}
-                  />
+                  <CreatePostForm defaultRoomId={state.roomId} onCreate={closeDialog} />
                 </Box>
               </Scroll>
             </Box>

@@ -19,13 +19,13 @@ export const useCloseCreatePostModal = (): CloseCallback => {
   return close;
 };
 
-type OpenCallback = (options?: CreatePostModalState) => void;
+type OpenCallback = (roomId?: string) => void;
 export const useOpenCreatePostModal = (): OpenCallback => {
   const setState = useSetAtom(createPostModalAtom);
 
   const open: OpenCallback = useCallback(
-    (options) => {
-      setState(options ?? {});
+    (roomId) => {
+      setState({ roomId });
     },
     [setState]
   );
