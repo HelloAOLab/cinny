@@ -14,6 +14,8 @@ import {
   HOME_FEED_PATH,
   APP_PATH,
   APP_COMMUNITY_PATH,
+  APP_LOGIN_PATH,
+  APP_REGISTER_PATH,
   LOGIN_PATH,
   INBOX_INVITES_PATH,
   INBOX_NOTIFICATIONS_PATH,
@@ -176,4 +178,12 @@ export const getAppCommunityPath = (communityIdOrAlias: string): string => {
     communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
   };
   return generatePath(APP_COMMUNITY_PATH, params);
+};
+export const getAppLoginPath = (server?: string): string => {
+  const params = server ? { server: encodeURIComponent(server) } : undefined;
+  return generatePath(APP_LOGIN_PATH, params);
+};
+export const getAppRegisterPath = (server?: string): string => {
+  const params = server ? { server: encodeURIComponent(server) } : undefined;
+  return generatePath(APP_REGISTER_PATH, params);
 };

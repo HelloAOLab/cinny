@@ -31,8 +31,12 @@ import {
   _SERVER_PATH,
   CREATE_PATH,
   APP_PATH,
+  APP_LOGIN_PATH,
+  APP_REGISTER_PATH,
 } from './paths';
 import {
+  getAppLoginPath,
+  getAppPath,
   getAppPathFromHref,
   getExploreFeaturedPath,
   getHomeFeedPath,
@@ -54,6 +58,7 @@ import {
 } from './client/space';
 import { Explore, FeaturedRooms, PublicRooms } from './client/explore';
 import { AppShell, AppIndexRedirect, RouteCommunityProvider } from './app-shell';
+import { AppAuthLayout, AppLogin, AppRegister } from './app-shell/auth';
 import { AppFeedScreen } from '../features/app-feed';
 import { Notifications, Inbox, Invites } from './client/inbox';
 import { setAfterLoginRedirectPath } from './afterLoginRedirectPath';
@@ -96,7 +101,9 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
           if (getFallbackSession()) return redirect(getHomePath());
           const afterLoginPath = getAppPathFromHref(getOriginBaseUrl(), window.location.href);
           if (afterLoginPath) setAfterLoginRedirectPath(afterLoginPath);
-          return redirect(getLoginPath());
+          return redirect(
+            afterLoginPath?.startsWith(APP_PATH) ? getAppLoginPath() : getLoginPath()
+          );
         }}
       />
       <Route
@@ -121,6 +128,25 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
 
       <Route
         loader={() => {
+          if (getFallbackSession()) {
+            return redirect(getAppPath());
+          }
+
+          return null;
+        }}
+        element={
+          <>
+            <AppAuthLayout />
+            <UnAuthRouteThemeManager />
+          </>
+        }
+      >
+        <Route path={APP_LOGIN_PATH} element={<AppLogin />} />
+        <Route path={APP_REGISTER_PATH} element={<AppRegister />} />
+      </Route>
+
+      <Route
+        loader={() => {
           const session = getFallbackSession();
           if (!session) {
             const afterLoginPath = getAppPathFromHref(
@@ -128,7 +154,9 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
               window.location.href
             );
             if (afterLoginPath) setAfterLoginRedirectPath(afterLoginPath);
-            return redirect(getLoginPath());
+            return redirect(
+              afterLoginPath?.startsWith(APP_PATH) ? getAppLoginPath() : getLoginPath()
+            );
           }
           return null;
         }}
