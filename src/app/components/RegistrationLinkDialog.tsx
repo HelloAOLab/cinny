@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -17,13 +17,16 @@ import {
   IconButton,
   Icon,
   Icons,
+  Chip,
 } from 'folds';
 import { useMatrixClient } from '../hooks/useMatrixClient';
 import { AsyncStatus, useAsyncCallback } from '../hooks/useAsyncCallback';
 import { stopPropagation } from '../utils/keyboard';
 import {
   RegistrationBotConfig,
+  RegistrationClientsResult,
   RegistrationLinkResult,
+  requestRegistrationClients,
   requestRegistrationLink,
 } from '../plugins/registration-bot';
 import { copyToClipboard } from '../utils/dom';
@@ -36,9 +39,30 @@ type RegistrationLinkDialogProps = {
 export function RegistrationLinkDialog({ botConfig, requestClose }: RegistrationLinkDialogProps) {
   const mx = useMatrixClient();
   const [copied, setCopied] = useState(false);
+  const [clientId, setClientId] = useState(botConfig.clientId);
+
+  const [clientsState, getClients] = useAsyncCallback<RegistrationClientsResult, Error, []>(
+    useCallback(() => requestRegistrationClients(mx, botConfig), [mx, botConfig])
+  );
+  useEffect(() => {
+    getClients();
+  }, [getClients]);
+
+  const clients =
+    clientsState.status === AsyncStatus.Success && clientsState.data.success
+      ? clientsState.data.clients
+      : undefined;
+
+  // Once the bot's client list arrives, default to it unless a client was already
+  // picked (configured, or chosen by the user before the list loaded).
+  useEffect(() => {
+    if (clientId === undefined && clients && clients.length > 0) {
+      setClientId(clients[0].id);
+    }
+  }, [clients, clientId]);
 
   const [linkState, getLink] = useAsyncCallback<RegistrationLinkResult, Error, []>(
-    useCallback(() => requestRegistrationLink(mx, botConfig), [mx, botConfig])
+    useCallback(() => requestRegistrationLink(mx, botConfig, clientId), [mx, botConfig, clientId])
   );
 
   const loading = linkState.status === AsyncStatus.Loading;
@@ -82,6 +106,29 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                 Ask the registration bot for a single-use link you can send to someone to invite
                 them to this homeserver.
               </Text>
+              {clients && clients.length > 1 && !result?.success && (
+                <Box direction="Column" gap="200">
+                  <Text size="L400">Client</Text>
+                  <Box wrap="Wrap" gap="100">
+                    {clients.map((client) => (
+                      <Chip
+                        key={client.id}
+                        variant={clientId === client.id ? 'Primary' : 'SurfaceVariant'}
+                        aria-pressed={clientId === client.id}
+                        outlined={clientId === client.id}
+                        radii="300"
+                        onClick={() => setClientId(client.id)}
+                        type="button"
+                        disabled={loading}
+                      >
+                        <Text truncate size="T300">
+                          {client.id}
+                        </Text>
+                      </Chip>
+                    ))}
+                  </Box>
+                </Box>
+              )}
               {linkState.status === AsyncStatus.Error && (
                 <Text style={{ color: color.Critical.Main }} size="T300">
                   {linkState.error.message}
