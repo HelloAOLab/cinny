@@ -12,8 +12,7 @@ import {
   makeMentionCustomProps,
   renderMatrixMention,
 } from '../../plugins/react-custom-html-parser';
-import { getEventReactions, getMemberAvatarMxc, getMemberDisplayName } from '../../utils/room';
-import { mxcUrlToHttp } from '../../utils/matrix';
+import { getEventReactions, getMemberDisplayName, getRoomAvatarUrl } from '../../utils/room';
 import { nameInitials } from '../../utils/common';
 import { relativeTime } from '../../utils/time';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
@@ -66,10 +65,10 @@ const OPTIONS_ICON = (
 type AppPostCardProps = {
   room: Room;
   event: MatrixEvent;
-  communityName: string;
+  community: Room;
 };
 
-export function AppPostCard({ room, event, communityName }: AppPostCardProps) {
+export function AppPostCard({ room, event, community }: AppPostCardProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
@@ -77,10 +76,7 @@ export function AppPostCard({ room, event, communityName }: AppPostCardProps) {
 
   const senderId = event.getSender();
   const displayName = (senderId && getMemberDisplayName(room, senderId)) ?? senderId ?? '';
-  const senderAvatarMxc = senderId ? getMemberAvatarMxc(room, senderId) : undefined;
-  const senderAvatarUrl = senderAvatarMxc
-    ? mxcUrlToHttp(mx, senderAvatarMxc, useAuthentication, 88, 88, 'crop') ?? undefined
-    : undefined;
+  const communityAvatarUrl = getRoomAvatarUrl(mx, community, 96, useAuthentication);
 
   const linkifyOpts = useMemo(
     () => ({
@@ -121,14 +117,14 @@ export function AppPostCard({ room, event, communityName }: AppPostCardProps) {
     <article className={css.Card}>
       <div className={css.CardHeader}>
         <span className={css.Avatar}>
-          {senderAvatarUrl ? (
-            <img src={senderAvatarUrl} alt="" width={44} height={44} />
+          {communityAvatarUrl ? (
+            <img src={communityAvatarUrl} alt="" width={44} height={44} />
           ) : (
-            nameInitials(displayName, 2)
+            nameInitials(community.name, 2)
           )}
         </span>
         <div className={css.CardHeaderText}>
-          <div className={css.RoomName}>{communityName}</div>
+          <div className={css.RoomName}>{community.name}</div>
           <div className={css.SenderLine}>
             {displayName} · {relativeTime(event.getTs())}
           </div>

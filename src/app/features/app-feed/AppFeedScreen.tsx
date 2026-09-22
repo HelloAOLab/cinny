@@ -36,7 +36,7 @@ export function AppFeedScreen() {
           key={post.event.getId()}
           room={post.room}
           event={post.event}
-          communityName={community.name}
+          community={community}
         />
       ))}
     </div>
