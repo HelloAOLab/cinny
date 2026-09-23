@@ -14,6 +14,7 @@ import { CommunitiesDrawer } from './CommunitiesDrawer';
 import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
 import { SharePostComposer } from './SharePostComposer';
+import { CreateCommunityFlow } from './CreateCommunityFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
 import { APP_COMMUNITY_CHAT_PATH, APP_COMMUNITY_CHAT_ROOM_PATH } from '../paths';
@@ -41,6 +42,7 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
+  const [createCommunityOpen, setCreateCommunityOpen] = useState(false);
   const [postTypeFilter, setPostTypeFilter] = useState<PostType>();
   const [composerState, setComposerState] = useState<{
     postType: PostType;
@@ -64,7 +66,15 @@ export function AppShell() {
     setComposerState({ postType, sharing, sharingMedia });
   };
 
-  const outletContext: AppOutletContext = { postTypeFilter };
+  const handleCommunityCreated = (communityId: string) => {
+    setCreateCommunityOpen(false);
+    navigate(getAppCommunityPath(communityId));
+  };
+
+  const outletContext: AppOutletContext = {
+    postTypeFilter,
+    onCreateCommunity: () => setCreateCommunityOpen(true),
+  };
 
   const userId = mx.getSafeUserId();
   const profile = useUserProfile(userId);
@@ -306,7 +316,17 @@ export function AppShell() {
         communities={joinedCommunities}
         currentCommunityId={communityIdOrAlias}
         getCommunityPath={chatMode ? getAppCommunityChatPath : getAppCommunityPath}
+        onCreateCommunity={() => {
+          setDrawerOpen(false);
+          setCreateCommunityOpen(true);
+        }}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <CreateCommunityFlow
+        open={createCommunityOpen}
+        onClose={() => setCreateCommunityOpen(false)}
+        onCreate={handleCommunityCreated}
       />
 
       <SharePostFlow

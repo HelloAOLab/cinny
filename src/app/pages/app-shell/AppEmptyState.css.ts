@@ -23,3 +23,17 @@ export const EmptyStateSubtitle = style({
   color: '#7c8d97',
   maxWidth: '280px',
 });
+
+export const EmptyStateAction = style({
+  marginTop: '12px',
+  background: '#1596ce',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '14px',
+  height: '46px',
+  padding: '0 20px',
+  fontFamily: 'inherit',
+  fontWeight: 700,
+  fontSize: '15px',
+  cursor: 'pointer',
+});

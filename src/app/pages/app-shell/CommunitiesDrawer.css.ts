@@ -105,3 +105,24 @@ export const EmptyList = style({
   fontWeight: 500,
   color: '#7c8d97',
 });
+
+export const Footer = style({
+  flexShrink: 0,
+  padding: '8px 10px 18px',
+  borderTop: '1px solid #e2e9ee',
+});
+
+export const CreateButton = style([
+  CommunityRow,
+  {
+    color: '#1596ce',
+  },
+]);
+
+export const CreateIcon = style([
+  CommunityAvatar,
+  {
+    background: '#1596ce',
+    color: '#fff',
+  },
+]);
