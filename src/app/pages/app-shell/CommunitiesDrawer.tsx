@@ -16,6 +16,7 @@ type CommunitiesDrawerProps = {
   currentCommunityId?: string;
   /** Path to navigate to when a community is picked; defaults to its feed. */
   getCommunityPath?: (communityId: string) => string;
+  onCreateCommunity: () => void;
   onClose: () => void;
 };
 
@@ -24,6 +25,7 @@ export function CommunitiesDrawer({
   communities,
   currentCommunityId,
   getCommunityPath = getAppCommunityPath,
+  onCreateCommunity,
   onClose,
 }: CommunitiesDrawerProps) {
   const mx = useMatrixClient();
@@ -96,6 +98,24 @@ export function CommunitiesDrawer({
                 </button>
               );
             })}
+          </div>
+          <div className={css.Footer}>
+            <button type="button" className={css.CreateButton} onClick={onCreateCommunity}>
+              <span className={css.CreateIcon}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.3"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+              <span className={css.CommunityName}>Create community</span>
+            </button>
           </div>
         </div>
       </FocusTrap>
