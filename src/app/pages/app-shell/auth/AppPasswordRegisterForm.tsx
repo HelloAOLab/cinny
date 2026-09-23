@@ -67,7 +67,7 @@ export function AppPasswordRegisterForm({
         type: AuthType.Dummy,
         session: stage.session,
       },
-      initial_device_display_name: 'Cinny Mobile',
+      initial_device_display_name: '115.1 Mobile',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ongoingAuthData]);
@@ -98,7 +98,7 @@ export function AppPasswordRegisterForm({
       auth: {
         session: authData.session,
       },
-      initial_device_display_name: 'Cinny Mobile',
+      initial_device_display_name: '115.1 Mobile',
     });
   };
 
