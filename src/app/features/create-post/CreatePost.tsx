@@ -56,6 +56,10 @@ import {
 } from '../../state/room/roomInputDrafts';
 import { UploadCardRenderer } from '../../components/upload-card';
 import { useFeedRooms } from '../feed';
+import { usePostsRoom } from '../app-feed';
+import { useSpaces } from '../../state/hooks/roomList';
+import { allRoomsAtom } from '../../state/room-list/roomList';
+import { applyPostSharing, PostSharingLevel } from './postSharing';
 import {
   getAudioMsgContent,
   getFileMsgContent,
@@ -78,31 +82,50 @@ import { KeySymbol } from '../../utils/key-symbol';
 
 type CreatePostFormProps = {
   defaultRoomId?: string;
+  defaultSpaceId?: string;
+  pickerMode?: 'room' | 'space';
+  sharing?: PostSharingLevel;
+  sharingMedia?: PostSharingLevel;
   onCreate?: () => void;
 };
-export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps) {
+export function CreatePostForm({
+  defaultRoomId,
+  defaultSpaceId,
+  pickerMode = 'room',
+  sharing,
+  sharingMedia,
+  onCreate,
+}: CreatePostFormProps) {
   const mx = useMatrixClient();
   const alive = useAlive();
   const editor = useEditor();
   const useAuthentication = useMediaAuthentication();
   const feedRoomIds = useFeedRooms();
+  const spaceIds = useSpaces(mx, allRoomsAtom);
   const isComposing = useComposingCheck();
 
   const [isMarkdown] = useSetting(settingsAtom, 'isMarkdown');
   const [globalToolbar] = useSetting(settingsAtom, 'editorToolbar');
   const [toolbar, setToolbar] = useState(globalToolbar);
 
-  const feedRooms = useMemo(
-    () =>
-      feedRoomIds.map((roomId) => mx.getRoom(roomId)).filter((room): room is Room => room !== null),
-    [mx, feedRoomIds]
+  // In "space" mode the picker lists communities (spaces) instead of
+  // individual rooms; the actual send target is resolved below via
+  // usePostsRoom, the same lookup the rest of the /app feed uses.
+  const pickerIds = pickerMode === 'space' ? spaceIds : feedRoomIds;
+  const pickerRooms = useMemo(
+    () => pickerIds.map((id) => mx.getRoom(id)).filter((room): room is Room => room !== null),
+    [mx, pickerIds]
   );
 
-  const [roomId, setRoomId] = useState<string | undefined>(
-    (defaultRoomId && feedRoomIds.includes(defaultRoomId) ? defaultRoomId : undefined) ??
-      feedRoomIds[0]
+  const defaultPickedId = pickerMode === 'space' ? defaultSpaceId : defaultRoomId;
+  const [pickedId, setPickedId] = useState<string | undefined>(
+    (defaultPickedId && pickerIds.includes(defaultPickedId) ? defaultPickedId : undefined) ??
+      pickerIds[0]
   );
-  const selectedRoom = roomId ? mx.getRoom(roomId) : undefined;
+  const pickedRoom = pickedId ? mx.getRoom(pickedId) : undefined;
+  const resolvedSpacePostsRoom = usePostsRoom(pickerMode === 'space' ? pickedRoom : undefined);
+  const roomId = pickerMode === 'space' ? resolvedSpacePostsRoom?.roomId : pickedId;
+  const targetRoom = roomId ? mx.getRoom(roomId) : undefined;
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
 
   const [selectedFiles, setSelectedFiles] = useState<TUploadItem[]>([]);
@@ -119,11 +142,11 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
 
   const handleFiles = useCallback(
     async (files: File[]) => {
-      if (!selectedRoom) return;
+      if (!targetRoom) return;
       const safeFiles = files.map(safeFile);
       const fileItems: TUploadItem[] = [];
 
-      if (selectedRoom.hasEncryptionStateEvent()) {
+      if (targetRoom.hasEncryptionStateEvent()) {
         const encryptedFiles = fulfilledPromiseSettledResult(
           await Promise.allSettled(safeFiles.map((f) => encryptFile(f)))
         );
@@ -145,7 +168,7 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
       }
       setSelectedFiles((items) => [...items, ...fileItems]);
     },
-    [selectedRoom]
+    [targetRoom]
   );
   const pickFile = useFilePicker(handleFiles, true);
 
@@ -184,19 +207,30 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
         }
       }
       await Promise.all(
-        contents.map((content) => mx.sendMessage(roomId, { ...content, 'm.post': true } as any))
+        contents.map((content) =>
+          mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any)
+        )
       );
       successUploads.forEach((upload) => roomUploadAtomFamily.remove(upload.file));
       setSelectedFiles((items) =>
         items.filter((item) => !successUploads.some((u) => u.file === item.file))
       );
     },
-    [mx, roomId, selectedFiles]
+    [mx, roomId, selectedFiles, sharing, sharingMedia]
   );
 
   const [createState, create] = useAsyncCallback<void, Error | MatrixError, []>(
     useCallback(async () => {
-      if (!roomId) throw new Error('Select a room to share to');
+      if (!roomId) {
+        if (pickerMode === 'space') {
+          throw new Error(
+            pickedRoom
+              ? `${pickedRoom.name} doesn't have a posts room yet`
+              : 'Select a community to share to'
+          );
+        }
+        throw new Error('Select a room to share to');
+      }
 
       const plainText = toPlainText(editor.children, isMarkdown).trim();
       const hasText = plainText !== '';
@@ -237,19 +271,31 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           msgtype: MsgType.Text,
           body: plainText,
           'm.mentions': mMentions,
-          'm.post': true,
         };
         if (customHtml) {
           content.format = 'org.matrix.custom.html';
           content.formatted_body = customHtml;
         }
 
-        await mx.sendMessage(roomId, content as any);
+        await mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any);
       }
 
       resetEditor(editor);
       resetEditorHistory(editor);
-    }, [mx, roomId, editor, isMarkdown, selectedFiles, uploads, uploadsPending, sendAttachments])
+    }, [
+      mx,
+      roomId,
+      editor,
+      isMarkdown,
+      selectedFiles,
+      uploads,
+      uploadsPending,
+      sendAttachments,
+      sharing,
+      sharingMedia,
+      pickerMode,
+      pickedRoom,
+    ])
   );
   const loading = createState.status === AsyncStatus.Loading;
   const error = createState.status === AsyncStatus.Error ? createState.error : undefined;
@@ -279,10 +325,12 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
     setMenuAnchor(evt.currentTarget.getBoundingClientRect());
   };
 
-  const handleRoomSelect = (id: string) => {
-    setRoomId(id);
+  const handlePickerSelect = (id: string) => {
+    setPickedId(id);
     setMenuAnchor(undefined);
   };
+
+  const pickerPlaceholder = pickerMode === 'space' ? 'Select a community' : 'Select a room';
 
   const renderRoomAvatar = (room: Room) => (
     <Avatar size="200" radii="400">
@@ -307,13 +355,13 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
           type="button"
           variant="SurfaceVariant"
           radii="400"
-          before={selectedRoom ? renderRoomAvatar(selectedRoom) : undefined}
+          before={pickedRoom ? renderRoomAvatar(pickedRoom) : undefined}
           after={<Icon size="100" src={Icons.ChevronBottom} />}
           onClick={handleOpenMenu}
           disabled={loading}
         >
           <Text size="T400" truncate>
-            {selectedRoom ? selectedRoom.name : 'Select a room'}
+            {pickedRoom ? pickedRoom.name : pickerPlaceholder}
           </Text>
         </Chip>
         <PopOut
@@ -332,21 +380,21 @@ export function CreatePostForm({ defaultRoomId, onCreate }: CreatePostFormProps)
             >
               <Menu style={{ maxHeight: '30vh', width: toRem(220), overflowY: 'auto' }}>
                 <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
-                  {feedRooms.length === 0 && (
+                  {pickerRooms.length === 0 && (
                     <Text size="T300" style={{ padding: config.space.S200 }}>
-                      No rooms available
+                      {pickerMode === 'space' ? 'No communities available' : 'No rooms available'}
                     </Text>
                   )}
-                  {feedRooms.map((room) => (
+                  {pickerRooms.map((room) => (
                     <MenuItem
                       key={room.roomId}
                       type="button"
                       size="300"
                       radii="300"
-                      variant={room.roomId === roomId ? 'Success' : 'Surface'}
-                      aria-pressed={room.roomId === roomId}
+                      variant={room.roomId === pickedId ? 'Success' : 'Surface'}
+                      aria-pressed={room.roomId === pickedId}
                       before={renderRoomAvatar(room)}
-                      onClick={() => handleRoomSelect(room.roomId)}
+                      onClick={() => handlePickerSelect(room.roomId)}
                     >
                       <Text truncate size="T400">
                         {room.name}

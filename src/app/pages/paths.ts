@@ -91,3 +91,8 @@ export const INBOX_INVITES_PATH = `/inbox/${_INVITES_PATH}`;
 export const SPACE_SETTINGS_PATH = '/space-settings/';
 
 export const ROOM_SETTINGS_PATH = '/room-settings/';
+
+export const APP_PATH = '/app/';
+export const APP_COMMUNITY_PATH = '/app/:communityIdOrAlias/';
+export const APP_LOGIN_PATH = '/app/login/:server?/';
+export const APP_REGISTER_PATH = '/app/register/:server?/';
