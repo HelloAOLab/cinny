@@ -187,3 +187,32 @@ export const RoomScreenBody = style({
   minHeight: 0,
   display: 'flex',
 });
+
+export const RoomItemSelected = style({
+  boxShadow: 'inset 0 0 0 2px #1596ce',
+  background: '#f3fafd',
+});
+
+/* Desktop split view: room list beside the open room. */
+
+export const Split = style({
+  flexGrow: 1,
+  minHeight: 0,
+  display: 'flex',
+});
+
+export const SplitList = style({
+  flexShrink: 0,
+  width: '340px',
+  overflowY: 'auto',
+  padding: '16px 0 24px',
+  borderRight: '1px solid #cdd9df',
+});
+
+export const SplitContent = style({
+  flexGrow: 1,
+  minWidth: 0,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+});

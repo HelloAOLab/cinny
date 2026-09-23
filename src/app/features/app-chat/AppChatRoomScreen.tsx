@@ -12,7 +12,9 @@ import { getAllParents } from '../../utils/room';
 import { useCommunity } from '../../pages/app-shell/CommunityContext';
 import { AppEmptyState } from '../../pages/app-shell/AppEmptyState';
 import { getAppCommunityChatPath } from '../../pages/pathUtils';
+import { isAppChatSplitLayout } from '../../pages/app-shell/appLayout';
 import { Room } from '../room';
+import { AppChatSplit } from './AppChatSplit';
 import * as css from './AppChat.css';
 
 function BackToChats({ communityId }: { communityId: string }) {
@@ -51,12 +53,36 @@ export function AppChatRoomScreen() {
 
   const roomId = useSelectedRoom();
   const room = roomId ? mx.getRoom(roomId) : undefined;
+  const available =
+    !!room &&
+    allRooms.includes(room.roomId) &&
+    getAllParents(roomToParents, room.roomId).has(community.roomId);
 
-  if (
-    !room ||
-    !allRooms.includes(room.roomId) ||
-    !getAllParents(roomToParents, room.roomId).has(community.roomId)
-  ) {
+  if (isAppChatSplitLayout(screenSize)) {
+    // The room list stays visible beside the room, so no back bar is needed.
+    return (
+      <AppChatSplit selectedRoomId={roomId}>
+        {room && available ? (
+          <div className={css.RoomScreen}>
+            <div className={css.RoomScreenBody}>
+              <RoomProvider key={room.roomId} value={room}>
+                <IsDirectRoomProvider value={mDirects.has(room.roomId)}>
+                  <Room />
+                </IsDirectRoomProvider>
+              </RoomProvider>
+            </div>
+          </div>
+        ) : (
+          <AppEmptyState
+            title="Room not available"
+            subtitle={`Join this room from the ${community.name} chat list to start chatting.`}
+          />
+        )}
+      </AppChatSplit>
+    );
+  }
+
+  if (!room || !available) {
     return (
       <div className={css.RoomScreen}>
         <div className={css.RoomScreenBackBar}>
