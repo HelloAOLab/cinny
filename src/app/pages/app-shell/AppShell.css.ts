@@ -78,7 +78,7 @@ export const Tab = style({
   fontWeight: 600,
   color: '#7c8d97',
   whiteSpace: 'nowrap',
-  cursor: 'default',
+  cursor: 'pointer',
 });
 
 export const TabActive = style({

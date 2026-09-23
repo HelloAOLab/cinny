@@ -9,13 +9,20 @@ import { allRoomsAtom } from '../../state/room-list/roomList';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { nameInitials } from '../../utils/common';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
+import { POST_TYPE_OPTIONS, PostType } from '../../features/create-post/postType';
 import { CommunitiesDrawer } from './CommunitiesDrawer';
 import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
 import { SharePostComposer } from './SharePostComposer';
+import { AppOutletContext } from './AppOutletContext';
 import * as css from './AppShell.css';
 
-const TABS = ['All', 'Prayer', 'Praise', 'Baptisms', 'Salvation'];
+type Tab = { label: string; postType?: PostType };
+
+const TABS: Tab[] = [
+  { label: 'All' },
+  ...POST_TYPE_OPTIONS.map((option) => ({ label: option.tabLabel, postType: option.value })),
+];
 
 export function AppShell() {
   const mx = useMatrixClient();
@@ -24,7 +31,9 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
+  const [postTypeFilter, setPostTypeFilter] = useState<PostType>();
   const [composerState, setComposerState] = useState<{
+    postType: PostType;
     sharing: PostSharingLevel;
     sharingMedia: PostSharingLevel;
   }>();
@@ -36,10 +45,16 @@ export function AppShell() {
 
   const community = communityIdOrAlias ? mx.getRoom(communityIdOrAlias) : undefined;
 
-  const handleShareComplete = (sharing: PostSharingLevel, sharingMedia: PostSharingLevel) => {
+  const handleShareComplete = (
+    postType: PostType,
+    sharing: PostSharingLevel,
+    sharingMedia: PostSharingLevel
+  ) => {
     setShareFlowOpen(false);
-    setComposerState({ sharing, sharingMedia });
+    setComposerState({ postType, sharing, sharingMedia });
   };
+
+  const outletContext: AppOutletContext = { postTypeFilter };
 
   const userId = mx.getSafeUserId();
   const profile = useUserProfile(userId);
@@ -125,19 +140,24 @@ export function AppShell() {
       </header>
 
       <nav className={css.Tabs}>
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`${css.Tab} ${tab === 'All' ? css.TabActive : ''}`}
-          >
-            {tab}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const active = tab.postType === postTypeFilter;
+          return (
+            <button
+              key={tab.label}
+              type="button"
+              aria-pressed={active}
+              className={`${css.Tab} ${active ? css.TabActive : ''}`}
+              onClick={() => setPostTypeFilter(tab.postType)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </nav>
 
       <div className={css.ScrollArea}>
-        <Outlet />
+        <Outlet context={outletContext} />
       </div>
 
       <button
@@ -260,6 +280,7 @@ export function AppShell() {
         defaultSpaceId={community?.roomId}
         sharing={composerState?.sharing}
         sharingMedia={composerState?.sharingMedia}
+        postType={composerState?.postType}
         onClose={() => setComposerState(undefined)}
       />
     </div>
