@@ -1,13 +1,21 @@
 import { ReactNode, useCallback } from 'react';
 import { matchPath, useLocation, useNavigate } from 'react-router-dom';
 import {
+  getAppCommunityChatPath,
   getDirectPath,
   getExplorePath,
   getHomePath,
   getInboxPath,
   getSpacePath,
 } from '../pages/pathUtils';
-import { DIRECT_PATH, EXPLORE_PATH, HOME_PATH, INBOX_PATH, SPACE_PATH } from '../pages/paths';
+import {
+  APP_COMMUNITY_CHAT_ROOM_PATH,
+  DIRECT_PATH,
+  EXPLORE_PATH,
+  HOME_PATH,
+  INBOX_PATH,
+  SPACE_PATH,
+} from '../pages/paths';
 
 type BackRouteHandlerProps = {
   children: (onBack: () => void) => ReactNode;
@@ -41,6 +49,20 @@ export function BackRouteHandler({ children }: BackRouteHandlerProps) {
       )
     ) {
       navigate(getDirectPath());
+      return;
+    }
+    // Must be checked before SPACE_PATH, which would otherwise match "/app/".
+    const appChatRoomMatch = matchPath(
+      {
+        path: APP_COMMUNITY_CHAT_ROOM_PATH,
+        caseSensitive: true,
+        end: false,
+      },
+      location.pathname
+    );
+    const encodedCommunityIdOrAlias = appChatRoomMatch?.params.communityIdOrAlias;
+    if (encodedCommunityIdOrAlias) {
+      navigate(getAppCommunityChatPath(decodeURIComponent(encodedCommunityIdOrAlias)));
       return;
     }
     const spaceMatch = matchPath(

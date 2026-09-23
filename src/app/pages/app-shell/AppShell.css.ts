@@ -153,3 +153,22 @@ export const NavButtonLabel = style({
   fontSize: '11px',
   fontWeight: 700,
 });
+
+export const NavButtonLink = style({
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  selectors: {
+    '&:disabled': {
+      cursor: 'default',
+      opacity: 0.5,
+    },
+  },
+});
+
+export const RoomArea = style({
+  flexGrow: 1,
+  minHeight: 0,
+  height: '100dvh',
+  display: 'flex',
+  flexDirection: 'column',
+});

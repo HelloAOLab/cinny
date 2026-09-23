@@ -14,6 +14,8 @@ type CommunitiesDrawerProps = {
   open: boolean;
   communities: Room[];
   currentCommunityId?: string;
+  /** Path to navigate to when a community is picked; defaults to its feed. */
+  getCommunityPath?: (communityId: string) => string;
   onClose: () => void;
 };
 
@@ -21,6 +23,7 @@ export function CommunitiesDrawer({
   open,
   communities,
   currentCommunityId,
+  getCommunityPath = getAppCommunityPath,
   onClose,
 }: CommunitiesDrawerProps) {
   const mx = useMatrixClient();
@@ -30,7 +33,7 @@ export function CommunitiesDrawer({
   if (!open) return null;
 
   const handleSelect = (roomId: string) => {
-    navigate(getAppCommunityPath(roomId));
+    navigate(getCommunityPath(roomId));
     onClose();
   };
 

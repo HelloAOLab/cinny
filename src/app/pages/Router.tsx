@@ -31,6 +31,8 @@ import {
   _SERVER_PATH,
   CREATE_PATH,
   APP_PATH,
+  _APP_CHAT_PATH,
+  _APP_CHAT_ROOM_PATH,
   APP_LOGIN_PATH,
   APP_REGISTER_PATH,
 } from './paths';
@@ -57,9 +59,15 @@ import {
   SpaceFeed,
 } from './client/space';
 import { Explore, FeaturedRooms, PublicRooms } from './client/explore';
-import { AppShell, AppIndexRedirect, RouteCommunityProvider } from './app-shell';
+import {
+  AppShell,
+  AppIndexRedirect,
+  AppCommunityOutlet,
+  RouteCommunityProvider,
+} from './app-shell';
 import { AppAuthLayout, AppLogin, AppRegister } from './app-shell/auth';
 import { AppFeedScreen } from '../features/app-feed';
+import { AppChatListScreen, AppChatRoomScreen } from '../features/app-chat';
 import { Notifications, Inbox, Invites } from './client/inbox';
 import { setAfterLoginRedirectPath } from './afterLoginRedirectPath';
 import { Room } from '../features/room';
@@ -258,10 +266,14 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
             path=":communityIdOrAlias/"
             element={
               <RouteCommunityProvider>
-                <AppFeedScreen />
+                <AppCommunityOutlet />
               </RouteCommunityProvider>
             }
-          />
+          >
+            <Route index element={<AppFeedScreen />} />
+            <Route path={_APP_CHAT_PATH} element={<AppChatListScreen />} />
+            <Route path={_APP_CHAT_ROOM_PATH} element={<AppChatRoomScreen />} />
+          </Route>
         </Route>
         <Route
           path={SPACE_PATH}
