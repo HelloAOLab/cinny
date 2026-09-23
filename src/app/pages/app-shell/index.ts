@@ -3,3 +3,4 @@ export * from './AppIndexRedirect';
 export * from './RouteCommunityProvider';
 export * from './CommunityContext';
 export * from './AppOutletContext';
+export * from './AppCommunityOutlet';
