@@ -43,7 +43,7 @@ export function AppPasswordLoginForm({ defaultUsername, defaultEmail }: AppPassw
         user: username,
       },
       password,
-      initial_device_display_name: 'Cinny Mobile',
+      initial_device_display_name: '115.1 Mobile',
     });
   };
 
@@ -61,7 +61,7 @@ export function AppPasswordLoginForm({ defaultUsername, defaultEmail }: AppPassw
         user: mxIdUsername,
       },
       password,
-      initial_device_display_name: 'Cinny Mobile',
+      initial_device_display_name: '115.1 Mobile',
     });
   };
 
@@ -74,7 +74,7 @@ export function AppPasswordLoginForm({ defaultUsername, defaultEmail }: AppPassw
         address: email,
       },
       password,
-      initial_device_display_name: 'Cinny Mobile',
+      initial_device_display_name: '115.1 Mobile',
     });
   };
 

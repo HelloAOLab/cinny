@@ -14,8 +14,8 @@ export function WelcomePage() {
       >
         <PageHeroSection>
           <PageHero
-            icon={<img width="70" height="70" src={CinnySVG} alt="Cinny Logo" />}
-            title="Welcome to Cinny"
+            icon={<img width="70" height="70" src={CinnySVG} alt="115.1 Logo" />}
+            title="Welcome to 115.1"
             subTitle={
               <span>
                 Yet another matrix client.{' '}

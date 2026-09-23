@@ -106,7 +106,7 @@ export function AppAuthLayout() {
     <div className={css.Page}>
       <div className={css.Card}>
         <div className={css.Header}>
-          <span className={css.Title}>Cinny</span>
+          <span className={css.Title}>115.1</span>
         </div>
         <div className={css.Content}>
           <div className={css.FormGroup}>
