@@ -16,6 +16,7 @@ import {
   APP_COMMUNITY_PATH,
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
+  APP_COMMUNITY_SETTINGS_PATH,
   APP_LOGIN_PATH,
   APP_REGISTER_PATH,
   LOGIN_PATH,
@@ -196,6 +197,12 @@ export const getAppCommunityChatRoomPath = (
     roomIdOrAlias: encodeURIComponent(roomIdOrAlias),
   };
   return generatePath(APP_COMMUNITY_CHAT_ROOM_PATH, params);
+};
+export const getAppCommunitySettingsPath = (communityIdOrAlias: string): string => {
+  const params = {
+    communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
+  };
+  return generatePath(APP_COMMUNITY_SETTINGS_PATH, params);
 };
 export const getAppLoginPath = (server?: string): string => {
   const params = server ? { server: encodeURIComponent(server) } : undefined;
