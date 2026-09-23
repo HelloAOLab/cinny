@@ -151,8 +151,9 @@ type CommentsPanelProps = {
   room: Room;
   postEvent: MatrixEvent;
   requestClose: () => void;
+  className?: string;
 };
-export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelProps) {
+export function CommentsPanel({ room, postEvent, requestClose, className }: CommentsPanelProps) {
   const mx = useMatrixClient();
   const rootEventId = postEvent.getId();
   const editor = useEditor();
@@ -240,7 +241,11 @@ export function CommentsPanel({ room, postEvent, requestClose }: CommentsPanelPr
 
   return (
     <Box
-      className={classNames(css.CommentsPanel, ContainerColor({ variant: 'Background' }))}
+      className={classNames(
+        css.CommentsPanel,
+        ContainerColor({ variant: 'Background' }),
+        className
+      )}
       shrink="No"
       direction="Column"
     >

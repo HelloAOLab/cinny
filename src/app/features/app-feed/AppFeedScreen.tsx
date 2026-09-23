@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { MatrixEvent, Room } from 'matrix-js-sdk';
 import { useCommunity } from '../../pages/app-shell/CommunityContext';
 import { AppEmptyState } from '../../pages/app-shell/AppEmptyState';
 import { useAppOutletContext } from '../../pages/app-shell/AppOutletContext';
@@ -6,6 +7,7 @@ import { POST_TYPE_OPTIONS, filterPostsByType } from '../create-post/postType';
 import { useFeedPosts } from '../feed/useFeedPosts';
 import { usePostsRoom } from './usePostsRoom';
 import { AppPostCard } from './AppPostCard';
+import { AppCommentsSheet } from './AppCommentsSheet';
 import * as css from './AppFeedScreen.css';
 
 export function AppFeedScreen() {
@@ -14,6 +16,7 @@ export function AppFeedScreen() {
   const { postTypeFilter } = useAppOutletContext();
   const allPosts = useFeedPosts(postsRoom ? [postsRoom.roomId] : []);
   const posts = filterPostsByType(allPosts, postTypeFilter);
+  const [commentsTarget, setCommentsTarget] = useState<{ room: Room; event: MatrixEvent }>();
 
   if (!postsRoom) {
     return (
@@ -50,8 +53,16 @@ export function AppFeedScreen() {
           room={post.room}
           event={post.event}
           community={community}
+          onOpenComments={(room, event) => setCommentsTarget({ room, event })}
         />
       ))}
+      {commentsTarget && (
+        <AppCommentsSheet
+          room={commentsTarget.room}
+          postEvent={commentsTarget.event}
+          onClose={() => setCommentsTarget(undefined)}
+        />
+      )}
     </div>
   );
 }

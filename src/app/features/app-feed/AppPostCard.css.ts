@@ -78,32 +78,46 @@ export const ReactionsRow = style({
   display: 'flex',
   alignItems: 'center',
   gap: '7px',
+  flexWrap: 'wrap',
   padding: '4px 16px 12px',
 });
 
-export const ReactionBadges = style({
-  display: 'flex',
-});
-
-export const ReactionBadge = style({
-  width: '24px',
-  height: '24px',
-  borderRadius: '50%',
-  border: '2px solid #fff',
+export const ReactionChip = style({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
+  gap: '4px',
+  height: '28px',
+  padding: '0 10px',
+  borderRadius: '14px',
+  border: '1px solid #e2e9ee',
+  background: '#f5f8fa',
+  color: '#6b7c85',
+  fontFamily: 'inherit',
+  fontSize: '13px',
+  fontWeight: 600,
+  cursor: 'pointer',
   selectors: {
-    '& + &': {
-      marginLeft: '-7px',
+    '&:disabled': {
+      cursor: 'default',
     },
   },
 });
 
-export const ReactionCount = style({
-  color: '#6b7c85',
-  fontSize: '13px',
-  fontWeight: 600,
+export const ReactionChipMine = style({
+  background: '#e7f3fa',
+  borderColor: '#9fd3ea',
+  color: '#1596ce',
+});
+
+export const ReactionEmoji = style({
+  fontSize: '15px',
+  lineHeight: 1,
+});
+
+export const ReactionImg = style({
+  width: '16px',
+  height: '16px',
+  objectFit: 'contain',
 });
 
 export const ReactionsSpacer = style({
@@ -111,6 +125,11 @@ export const ReactionsSpacer = style({
 });
 
 export const CommentCount = style({
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  fontFamily: 'inherit',
+  cursor: 'pointer',
   color: '#8a99a1',
   fontSize: '13px',
   fontWeight: 600,
@@ -132,8 +151,19 @@ export const ActionButton = style({
   padding: '12px',
   color: '#5a6b74',
   fontWeight: 700,
+  fontFamily: 'inherit',
   fontSize: '14px',
-  cursor: 'default',
+  cursor: 'pointer',
+  selectors: {
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'default',
+    },
+  },
+});
+
+export const ActionButtonActive = style({
+  color: '#1596ce',
 });
 
 export const ActionButtonDivider = style({

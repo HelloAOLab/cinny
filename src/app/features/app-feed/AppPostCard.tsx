@@ -5,6 +5,10 @@ import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useMentionClickHandler } from '../../hooks/useMentionClickHandler';
 import { useSpoilerClickHandler } from '../../hooks/useSpoilerClickHandler';
 import { useThreadReplies } from '../../hooks/useThreadReplies';
+import { useReactionToggle } from '../../hooks/useReactionToggle';
+import { useRoomCreators } from '../../hooks/useRoomCreators';
+import { usePowerLevels } from '../../hooks/usePowerLevels';
+import { useRoomPermissions } from '../../hooks/useRoomPermissions';
 import {
   factoryRenderLinkifyWithMention,
   getReactCustomHtmlParser,
@@ -14,13 +18,15 @@ import {
 } from '../../plugins/react-custom-html-parser';
 import { getEventReactions, getMemberDisplayName, getRoomAvatarUrl } from '../../utils/room';
 import { nameInitials } from '../../utils/common';
+import { mxcUrlToHttp } from '../../utils/matrix';
 import { relativeTime } from '../../utils/time';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
 import { MImage, ImageContent } from '../../components/message';
 import { Image } from '../../components/media';
 import { ImageViewer } from '../../components/image-viewer';
-import { GetContentCallback } from '../../../types/matrix/room';
+import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
+import { AMEN_REACTION_KEY, summarizePostReactions } from './postReactions';
 import * as css from './AppPostCard.css';
 
 const AMEN_ICON = (
@@ -66,9 +72,10 @@ type AppPostCardProps = {
   room: Room;
   event: MatrixEvent;
   community: Room;
+  onOpenComments: (room: Room, event: MatrixEvent) => void;
 };
 
-export function AppPostCard({ room, event, community }: AppPostCardProps) {
+export function AppPostCard({ room, event, community, onOpenComments }: AppPostCardProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
@@ -107,11 +114,20 @@ export function AppPostCard({ room, event, community }: AppPostCardProps) {
   const reactionRelations = eventId
     ? getEventReactions(room.getUnfilteredTimelineSet(), eventId)
     : undefined;
-  const reactionCount = (reactionRelations?.getSortedAnnotationsByKey() ?? []).reduce(
-    (count, [, events]) => count + events.size,
-    0
+  const reactions = summarizePostReactions(
+    reactionRelations?.getSortedAnnotationsByKey() ?? [],
+    mx.getUserId()
   );
+  const reactedAmen = reactions.some((r) => r.key === AMEN_REACTION_KEY && r.mine);
   const commentCount = useThreadReplies(room, eventId).length;
+
+  const creators = useRoomCreators(room);
+  const powerLevels = usePowerLevels(room);
+  const permissions = useRoomPermissions(creators, powerLevels);
+  const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
+  const handleReactionToggle = useReactionToggle(room);
+
+  const handleOpenComments = () => onOpenComments(room, event);
 
   return (
     <article className={css.Card}>
@@ -166,40 +182,63 @@ export function AppPostCard({ room, event, community }: AppPostCardProps) {
         </div>
       )}
 
-      {eventId && (
+      {eventId && (reactions.length > 0 || commentCount > 0) && (
         <div className={css.ReactionsRow}>
-          {reactionCount > 0 && (
-            <>
-              <span className={css.ReactionBadges}>
-                <span
-                  className={css.ReactionBadge}
-                  style={{ background: '#e7f3fa', color: '#1596ce' }}
-                >
-                  {AMEN_ICON}
-                </span>
-              </span>
-              <span className={css.ReactionCount}>{reactionCount}</span>
-            </>
-          )}
+          {reactions.map((reaction) => (
+            <button
+              key={reaction.key}
+              type="button"
+              className={`${css.ReactionChip} ${reaction.mine ? css.ReactionChipMine : ''}`}
+              aria-pressed={reaction.mine}
+              aria-label={`${reaction.key === AMEN_REACTION_KEY ? 'Amen' : reaction.key}: ${
+                reaction.count
+              }`}
+              disabled={!canSendReaction}
+              onClick={() => handleReactionToggle(eventId, reaction.key)}
+            >
+              {reaction.key === AMEN_REACTION_KEY && AMEN_ICON}
+              {reaction.key !== AMEN_REACTION_KEY &&
+                (reaction.key.startsWith('mxc://') ? (
+                  <img
+                    className={css.ReactionImg}
+                    src={mxcUrlToHttp(mx, reaction.key, useAuthentication) ?? reaction.key}
+                    alt=""
+                  />
+                ) : (
+                  <span className={css.ReactionEmoji}>{reaction.key}</span>
+                ))}
+              <span>{reaction.count}</span>
+            </button>
+          ))}
           <span className={css.ReactionsSpacer} />
           {commentCount > 0 && (
-            <span className={css.CommentCount}>
+            <button type="button" className={css.CommentCount} onClick={handleOpenComments}>
               {commentCount} comment{commentCount === 1 ? '' : 's'}
-            </span>
+            </button>
           )}
         </div>
       )}
 
-      <div className={css.ActionBar}>
-        {/* TODO: not wired up yet - could toggle an "Amen" reaction on eventId */}
-        <button type="button" className={css.ActionButton}>
-          {AMEN_ICON} Amen
-        </button>
-        {/* TODO: could open src/app/features/feed/comments/CommentsPanel for this room+event */}
-        <button type="button" className={`${css.ActionButton} ${css.ActionButtonDivider}`}>
-          {COMMENT_ICON} Comment
-        </button>
-      </div>
+      {eventId && (
+        <div className={css.ActionBar}>
+          <button
+            type="button"
+            className={`${css.ActionButton} ${reactedAmen ? css.ActionButtonActive : ''}`}
+            aria-pressed={reactedAmen}
+            disabled={!canSendReaction}
+            onClick={() => handleReactionToggle(eventId, AMEN_REACTION_KEY)}
+          >
+            {AMEN_ICON} Amen
+          </button>
+          <button
+            type="button"
+            className={`${css.ActionButton} ${css.ActionButtonDivider}`}
+            onClick={handleOpenComments}
+          >
+            {COMMENT_ICON} Comment
+          </button>
+        </div>
+      )}
     </article>
   );
 }
