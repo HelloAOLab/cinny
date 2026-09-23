@@ -27,6 +27,16 @@ describe('applyPostSharing', () => {
     expect('m.post.sharing.media' in result).toBe(false);
   });
 
+  it('includes m.post.type when a post type is passed', () => {
+    const result = applyPostSharing({}, 'public', 'public', 'baptism');
+    expect(result['m.post.type']).toBe('baptism');
+  });
+
+  it('omits m.post.type when no post type is passed', () => {
+    const result = applyPostSharing({}, 'public', 'public');
+    expect('m.post.type' in result).toBe(false);
+  });
+
   it('preserves the original content fields', () => {
     const result = applyPostSharing({ msgtype: 'm.text', body: 'hi' }, 'public', 'public');
     expect(result.msgtype).toBe('m.text');

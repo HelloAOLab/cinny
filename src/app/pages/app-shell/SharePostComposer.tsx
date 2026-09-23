@@ -2,6 +2,7 @@ import React from 'react';
 import FocusTrap from 'focus-trap-react';
 import { CreatePostForm } from '../../features/create-post';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
+import { PostType } from '../../features/create-post/postType';
 import { stopPropagation } from '../../utils/keyboard';
 import { LightTheme } from '../../hooks/useTheme';
 import * as css from './SharePostComposer.css';
@@ -32,6 +33,7 @@ type SharePostComposerProps = {
   defaultSpaceId?: string;
   sharing?: PostSharingLevel;
   sharingMedia?: PostSharingLevel;
+  postType?: PostType;
   onClose: () => void;
 };
 
@@ -40,6 +42,7 @@ export function SharePostComposer({
   defaultSpaceId,
   sharing,
   sharingMedia,
+  postType,
   onClose,
 }: SharePostComposerProps) {
   if (!open) return null;
@@ -74,6 +77,7 @@ export function SharePostComposer({
             defaultSpaceId={defaultSpaceId}
             sharing={sharing}
             sharingMedia={sharingMedia}
+            postType={postType}
             onCreate={onClose}
           />
         </div>

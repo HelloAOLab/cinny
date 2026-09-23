@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
+import { POST_TYPE_OPTIONS, PostType } from '../../features/create-post/postType';
 import { stopPropagation } from '../../utils/keyboard';
 import * as css from './SharePostFlow.css';
 
@@ -66,24 +67,51 @@ const MEDIA_OPTIONS: ShareOption[] = [
 type SharePostFlowProps = {
   open: boolean;
   onClose: () => void;
-  onComplete: (sharing: PostSharingLevel, sharingMedia: PostSharingLevel) => void;
+  onComplete: (
+    postType: PostType,
+    sharing: PostSharingLevel,
+    sharingMedia: PostSharingLevel
+  ) => void;
+};
+
+type Step = 'type' | 'sharing' | 'media';
+
+const QUESTIONS: Record<Step, string> = {
+  type: 'What would you like to share?',
+  sharing: 'Can we share your post outside this app?',
+  media: 'Can we include images and videos?',
 };
 
 export function SharePostFlow({ open, onClose, onComplete }: SharePostFlowProps) {
-  const [step, setStep] = useState<'sharing' | 'media'>('sharing');
+  const [step, setStep] = useState<Step>('type');
+  const [postType, setPostType] = useState<PostType>();
   const [sharing, setSharing] = useState<PostSharingLevel>();
 
-  const handleClose = () => {
-    setStep('sharing');
+  const reset = () => {
+    setStep('type');
+    setPostType(undefined);
     setSharing(undefined);
+  };
+
+  const handleClose = () => {
+    reset();
     onClose();
+  };
+
+  const complete = (sharingValue: PostSharingLevel, mediaValue: PostSharingLevel) => {
+    const postTypeValue = postType ?? 'prayer';
+    reset();
+    onComplete(postTypeValue, sharingValue, mediaValue);
+  };
+
+  const handleTypeSelect = (value: PostType) => {
+    setPostType(value);
+    setStep('sharing');
   };
 
   const handleSharingSelect = (value: PostSharingLevel) => {
     if (value === 'private') {
-      setStep('sharing');
-      setSharing(undefined);
-      onComplete(value, 'private');
+      complete(value, 'private');
       return;
     }
     setSharing(value);
@@ -91,19 +119,31 @@ export function SharePostFlow({ open, onClose, onComplete }: SharePostFlowProps)
   };
 
   const handleMediaSelect = (value: PostSharingLevel) => {
-    const sharingValue = sharing ?? 'public';
-    setStep('sharing');
-    setSharing(undefined);
-    onComplete(sharingValue, value);
+    complete(sharing ?? 'public', value);
   };
+
+  const handleBack = () => setStep(step === 'media' ? 'sharing' : 'type');
 
   if (!open) return null;
 
-  const options = step === 'sharing' ? SHARING_OPTIONS : MEDIA_OPTIONS;
-  const question =
-    step === 'sharing'
-      ? 'Can we share your post outside this app?'
-      : 'Can we include images and videos?';
+  let options: { key: string; label: string; subtitle: string; onSelect: () => void }[];
+  if (step === 'type') {
+    options = POST_TYPE_OPTIONS.map((option) => ({
+      key: option.value,
+      label: option.label,
+      subtitle: option.subtitle,
+      onSelect: () => handleTypeSelect(option.value),
+    }));
+  } else {
+    const levelOptions = step === 'sharing' ? SHARING_OPTIONS : MEDIA_OPTIONS;
+    const handleSelect = step === 'sharing' ? handleSharingSelect : handleMediaSelect;
+    options = levelOptions.map((option) => ({
+      key: option.label,
+      label: option.label,
+      subtitle: option.subtitle,
+      onSelect: () => handleSelect(option.value),
+    }));
+  }
 
   return (
     <FocusTrap
@@ -117,12 +157,12 @@ export function SharePostFlow({ open, onClose, onComplete }: SharePostFlowProps)
     >
       <div className={css.Overlay} role="dialog" aria-label="Share post">
         <div className={css.Header}>
-          {step === 'media' ? (
+          {step !== 'type' ? (
             <button
               type="button"
               aria-label="Back"
               className={css.HeaderButton}
-              onClick={() => setStep('sharing')}
+              onClick={handleBack}
             >
               {BACK_ICON}
             </button>
@@ -140,18 +180,14 @@ export function SharePostFlow({ open, onClose, onComplete }: SharePostFlowProps)
           </button>
         </div>
         <div className={css.Body}>
-          <div className={css.Question}>{question}</div>
+          <div className={css.Question}>{QUESTIONS[step]}</div>
           <div className={css.Options}>
             {options.map((option) => (
               <button
-                key={option.label}
+                key={option.key}
                 type="button"
                 className={css.Option}
-                onClick={() =>
-                  step === 'sharing'
-                    ? handleSharingSelect(option.value)
-                    : handleMediaSelect(option.value)
-                }
+                onClick={option.onSelect}
               >
                 <div className={css.OptionTitle}>{option.label}</div>
                 <div className={css.OptionSubtitle}>{option.subtitle}</div>

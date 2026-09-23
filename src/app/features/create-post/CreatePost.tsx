@@ -60,6 +60,7 @@ import { usePostsRoom } from '../app-feed';
 import { useSpaces } from '../../state/hooks/roomList';
 import { allRoomsAtom } from '../../state/room-list/roomList';
 import { applyPostSharing, PostSharingLevel } from './postSharing';
+import { PostType } from './postType';
 import {
   getAudioMsgContent,
   getFileMsgContent,
@@ -86,6 +87,7 @@ type CreatePostFormProps = {
   pickerMode?: 'room' | 'space';
   sharing?: PostSharingLevel;
   sharingMedia?: PostSharingLevel;
+  postType?: PostType;
   onCreate?: () => void;
 };
 export function CreatePostForm({
@@ -94,6 +96,7 @@ export function CreatePostForm({
   pickerMode = 'room',
   sharing,
   sharingMedia,
+  postType,
   onCreate,
 }: CreatePostFormProps) {
   const mx = useMatrixClient();
@@ -208,7 +211,7 @@ export function CreatePostForm({
       }
       await Promise.all(
         contents.map((content) =>
-          mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any)
+          mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia, postType) as any)
         )
       );
       successUploads.forEach((upload) => roomUploadAtomFamily.remove(upload.file));
@@ -216,7 +219,7 @@ export function CreatePostForm({
         items.filter((item) => !successUploads.some((u) => u.file === item.file))
       );
     },
-    [mx, roomId, selectedFiles, sharing, sharingMedia]
+    [mx, roomId, selectedFiles, sharing, sharingMedia, postType]
   );
 
   const [createState, create] = useAsyncCallback<void, Error | MatrixError, []>(
@@ -277,7 +280,10 @@ export function CreatePostForm({
           content.formatted_body = customHtml;
         }
 
-        await mx.sendMessage(roomId, applyPostSharing(content, sharing, sharingMedia) as any);
+        await mx.sendMessage(
+          roomId,
+          applyPostSharing(content, sharing, sharingMedia, postType) as any
+        );
       }
 
       resetEditor(editor);
@@ -293,6 +299,7 @@ export function CreatePostForm({
       sendAttachments,
       sharing,
       sharingMedia,
+      postType,
       pickerMode,
       pickedRoom,
     ])
