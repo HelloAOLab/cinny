@@ -4,6 +4,7 @@ import '@fontsource-variable/plus-jakarta-sans';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { useClientConfig } from '../../hooks/useClientConfig';
 import { useSpaces } from '../../state/hooks/roomList';
 import { allRoomsAtom } from '../../state/room-list/roomList';
 import { mxcUrlToHttp } from '../../utils/matrix';
@@ -15,6 +16,7 @@ import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
 import { SharePostComposer } from './SharePostComposer';
 import { CreateCommunityFlow } from './CreateCommunityFlow';
+import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
 import { APP_COMMUNITY_CHAT_PATH, APP_COMMUNITY_CHAT_ROOM_PATH } from '../paths';
@@ -31,6 +33,7 @@ export function AppShell() {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const navigate = useNavigate();
+  const { registrationBot } = useClientConfig();
   const { communityIdOrAlias } = useParams();
   const chatListMatch = useMatch({ path: APP_COMMUNITY_CHAT_PATH, caseSensitive: true, end: true });
   const chatRoomMatch = useMatch({
@@ -43,6 +46,7 @@ export function AppShell() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
   const [createCommunityOpen, setCreateCommunityOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [postTypeFilter, setPostTypeFilter] = useState<PostType>();
   const [composerState, setComposerState] = useState<{
     postType: PostType;
@@ -259,6 +263,7 @@ export function AppShell() {
             open={accountMenuOpen}
             displayName={profile.displayName}
             userId={userId}
+            onInvite={registrationBot ? () => setInviteOpen(true) : undefined}
             onClose={() => setAccountMenuOpen(false)}
           />
         </div>
@@ -328,6 +333,14 @@ export function AppShell() {
         onClose={() => setCreateCommunityOpen(false)}
         onCreate={handleCommunityCreated}
       />
+
+      {registrationBot && (
+        <InviteFlow
+          open={inviteOpen}
+          botConfig={registrationBot}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
 
       <SharePostFlow
         open={shareFlowOpen}
