@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { PopOut, RectCords } from 'folds';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
@@ -27,6 +28,8 @@ import { ImageViewer } from '../../components/image-viewer';
 import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
 import { IImageContent } from '../../../types/matrix/common';
 import { AMEN_REACTION_KEY, summarizePostReactions } from './postReactions';
+import { canRemovePost } from './postOptions';
+import { AppPostOptionsMenu } from './AppPostOptionsMenu';
 import * as css from './AppPostCard.css';
 
 const AMEN_ICON = (
@@ -126,6 +129,16 @@ export function AppPostCard({ room, event, community, onOpenComments }: AppPostC
   const permissions = useRoomPermissions(creators, powerLevels);
   const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
   const handleReactionToggle = useReactionToggle(room);
+  const canRemove = canRemovePost({
+    canRedact: permissions.action('redact', mx.getSafeUserId()),
+    canDeleteOwn: permissions.event(MessageEvent.RoomRedaction, mx.getSafeUserId()),
+    senderId,
+    userId: mx.getUserId(),
+    isRedacted: event.isRedacted(),
+  });
+
+  const [optionsAnchor, setOptionsAnchor] = useState<RectCords>();
+  const closeOptions = useCallback(() => setOptionsAnchor(undefined), []);
 
   const handleOpenComments = () => onOpenComments(room, event);
 
@@ -145,10 +158,36 @@ export function AppPostCard({ room, event, community, onOpenComments }: AppPostC
             {displayName} · {relativeTime(event.getTs())}
           </div>
         </div>
-        {/* TODO: no message-options menu wired up yet */}
-        <button type="button" aria-label="Post options" className={css.OptionsButton}>
-          {OPTIONS_ICON}
-        </button>
+        {eventId && (
+          <PopOut
+            anchor={optionsAnchor}
+            position="Bottom"
+            align="End"
+            content={
+              <AppPostOptionsMenu
+                room={room}
+                event={event}
+                canRemove={canRemove}
+                onClose={closeOptions}
+              />
+            }
+          >
+            <button
+              type="button"
+              aria-label="Post options"
+              aria-haspopup="menu"
+              aria-expanded={!!optionsAnchor}
+              className={css.OptionsButton}
+              onClick={(evt) =>
+                setOptionsAnchor(
+                  optionsAnchor ? undefined : evt.currentTarget.getBoundingClientRect()
+                )
+              }
+            >
+              {OPTIONS_ICON}
+            </button>
+          </PopOut>
+        )}
       </div>
 
       {isImagePost && (
