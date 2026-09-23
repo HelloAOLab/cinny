@@ -57,7 +57,8 @@ export const OptionsButton = style({
   color: '#8a99a1',
   display: 'flex',
   padding: '4px',
-  cursor: 'default',
+  borderRadius: '50%',
+  cursor: 'pointer',
   flexShrink: 0,
 });
 
