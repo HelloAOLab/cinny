@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import FocusTrap from 'focus-trap-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -19,17 +19,9 @@ import {
   Icons,
   Chip,
 } from 'folds';
-import { useMatrixClient } from '../hooks/useMatrixClient';
-import { AsyncStatus, useAsyncCallback } from '../hooks/useAsyncCallback';
 import { stopPropagation } from '../utils/keyboard';
-import {
-  RegistrationBotConfig,
-  RegistrationClientsResult,
-  RegistrationLinkResult,
-  requestRegistrationClients,
-  requestRegistrationLink,
-} from '../plugins/registration-bot';
-import { copyToClipboard } from '../utils/dom';
+import { RegistrationBotConfig } from '../plugins/registration-bot';
+import { useRegistrationLink } from '../hooks/useRegistrationLink';
 
 type RegistrationLinkDialogProps = {
   botConfig: RegistrationBotConfig;
@@ -37,44 +29,18 @@ type RegistrationLinkDialogProps = {
 };
 
 export function RegistrationLinkDialog({ botConfig, requestClose }: RegistrationLinkDialogProps) {
-  const mx = useMatrixClient();
-  const [copied, setCopied] = useState(false);
-  const [clientId, setClientId] = useState(botConfig.clientId);
-
-  const [clientsState, getClients] = useAsyncCallback<RegistrationClientsResult, Error, []>(
-    useCallback(() => requestRegistrationClients(mx, botConfig), [mx, botConfig])
-  );
-  useEffect(() => {
-    getClients();
-  }, [getClients]);
-
-  const clients =
-    clientsState.status === AsyncStatus.Success && clientsState.data.success
-      ? clientsState.data.clients
-      : undefined;
-
-  // Once the bot's client list arrives, default to it unless a client was already
-  // picked (configured, or chosen by the user before the list loaded).
-  useEffect(() => {
-    if (clientId === undefined && clients && clients.length > 0) {
-      setClientId(clients[0].id);
-    }
-  }, [clients, clientId]);
-
-  const [linkState, getLink] = useAsyncCallback<RegistrationLinkResult, Error, []>(
-    useCallback(() => requestRegistrationLink(mx, botConfig, clientId), [mx, botConfig, clientId])
-  );
-
-  const loading = linkState.status === AsyncStatus.Loading;
-  const clientsLoading =
-    clientsState.status === AsyncStatus.Idle || clientsState.status === AsyncStatus.Loading;
-  const result = linkState.status === AsyncStatus.Success ? linkState.data : undefined;
-
-  const handleCopy = () => {
-    if (!result?.success) return;
-    copyToClipboard(result.link);
-    setCopied(true);
-  };
+  const {
+    clients,
+    clientsLoading,
+    clientId,
+    setClientId,
+    loading,
+    link,
+    error,
+    getLink,
+    copied,
+    copyLink,
+  } = useRegistrationLink(botConfig);
 
   return (
     <Overlay open backdrop={<OverlayBackdrop />}>
@@ -108,7 +74,7 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                 Ask the registration bot for a single-use link you can send to someone to invite
                 them to this homeserver.
               </Text>
-              {clients && clients.length > 1 && !result?.success && (
+              {clients && clients.length > 1 && !link && (
                 <Box direction="Column" gap="200">
                   <Text size="L400">Client</Text>
                   <Box wrap="Wrap" gap="100">
@@ -131,23 +97,18 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                   </Box>
                 </Box>
               )}
-              {linkState.status === AsyncStatus.Error && (
+              {error && (
                 <Text style={{ color: color.Critical.Main }} size="T300">
-                  {linkState.error.message}
+                  {error}
                 </Text>
               )}
-              {result && !result.success && (
-                <Text style={{ color: color.Critical.Main }} size="T300">
-                  {result.error.message}
-                </Text>
-              )}
-              {result?.success && (
+              {link && (
                 <Box direction="Column" gap="200">
-                  <Input readOnly variant="SurfaceVariant" value={result.link} />
+                  <Input readOnly variant="SurfaceVariant" value={link} />
                   <Button
                     variant="Secondary"
                     fill="Soft"
-                    onClick={handleCopy}
+                    onClick={copyLink}
                     before={<Icon size="100" src={Icons.Link} />}
                   >
                     <Text size="B400">{copied ? 'Copied!' : 'Copy Link'}</Text>
@@ -160,13 +121,13 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                         borderRadius: config.radii.R400,
                       }}
                     >
-                      <QRCodeSVG value={result.link} size={200} marginSize={0} />
+                      <QRCodeSVG value={link} size={200} marginSize={0} />
                     </Box>
                   </Box>
                 </Box>
               )}
               <Box direction="Column" gap="200">
-                {!result?.success && (
+                {!link && (
                   <Button
                     variant="Primary"
                     onClick={getLink}
@@ -177,7 +138,7 @@ export function RegistrationLinkDialog({ botConfig, requestClose }: Registration
                   </Button>
                 )}
                 <Button variant="Secondary" fill="Soft" onClick={requestClose} disabled={loading}>
-                  <Text size="B400">{result?.success ? 'Close' : 'Cancel'}</Text>
+                  <Text size="B400">{link ? 'Close' : 'Cancel'}</Text>
                 </Button>
               </Box>
             </Box>

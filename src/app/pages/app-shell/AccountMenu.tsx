@@ -23,14 +23,33 @@ const LOGOUT_ICON = (
   </svg>
 );
 
+const INVITE_ICON = (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M19 8v6M22 11h-6" />
+  </svg>
+);
+
 type AccountMenuProps = {
   open: boolean;
   displayName?: string;
   userId: string;
+  /** Opens the invite flow; the menu item is hidden when omitted. */
+  onInvite?: () => void;
   onClose: () => void;
 };
 
-export function AccountMenu({ open, displayName, userId, onClose }: AccountMenuProps) {
+export function AccountMenu({ open, displayName, userId, onInvite, onClose }: AccountMenuProps) {
   const mx = useMatrixClient();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
@@ -99,15 +118,31 @@ export function AccountMenu({ open, displayName, userId, onClose }: AccountMenuP
               </div>
             </>
           ) : (
-            <button
-              type="button"
-              role="menuitem"
-              className={`${css.MenuItem} ${css.MenuItemCritical}`}
-              onClick={() => setConfirmingLogout(true)}
-            >
-              {LOGOUT_ICON}
-              Log out
-            </button>
+            <>
+              {onInvite && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={css.MenuItem}
+                  onClick={() => {
+                    onClose();
+                    onInvite();
+                  }}
+                >
+                  {INVITE_ICON}
+                  Invite people
+                </button>
+              )}
+              <button
+                type="button"
+                role="menuitem"
+                className={`${css.MenuItem} ${css.MenuItemCritical}`}
+                onClick={() => setConfirmingLogout(true)}
+              >
+                {LOGOUT_ICON}
+                Log out
+              </button>
+            </>
           )}
         </div>
       </FocusTrap>
