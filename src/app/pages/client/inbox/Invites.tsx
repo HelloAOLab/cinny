@@ -691,7 +691,14 @@ function SpamInvites({
   );
 }
 
-export function Invites() {
+type InvitesProps = {
+  /** Replaces the default navigation after joining, e.g. to stay in the /app shell. */
+  onNavigate?: NavigateHandler;
+  /** Hides the page header when the embedding screen supplies its own. */
+  hideHeader?: boolean;
+};
+
+export function Invites({ onNavigate, hideHeader }: InvitesProps = {}) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const { navigateRoom, navigateSpace } = useRoomNavigate();
@@ -738,6 +745,10 @@ export function Invites() {
   const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
 
   const handleNavigate = (roomId: string, space: boolean) => {
+    if (onNavigate) {
+      onNavigate(roomId, space);
+      return;
+    }
     if (space) {
       navigateSpace(roomId);
       return;
@@ -747,28 +758,30 @@ export function Invites() {
 
   return (
     <Page>
-      <PageHeader balance>
-        <Box grow="Yes" gap="200">
-          <Box grow="Yes" basis="No">
-            {screenSize === ScreenSize.Mobile && (
-              <BackRouteHandler>
-                {(onBack) => (
-                  <IconButton onClick={onBack}>
-                    <Icon src={Icons.ArrowLeft} />
-                  </IconButton>
-                )}
-              </BackRouteHandler>
-            )}
+      {!hideHeader && (
+        <PageHeader balance>
+          <Box grow="Yes" gap="200">
+            <Box grow="Yes" basis="No">
+              {screenSize === ScreenSize.Mobile && (
+                <BackRouteHandler>
+                  {(onBack) => (
+                    <IconButton onClick={onBack}>
+                      <Icon src={Icons.ArrowLeft} />
+                    </IconButton>
+                  )}
+                </BackRouteHandler>
+              )}
+            </Box>
+            <Box alignItems="Center" gap="200">
+              {screenSize !== ScreenSize.Mobile && <Icon size="400" src={Icons.Mail} />}
+              <Text size="H3" truncate>
+                Invites
+              </Text>
+            </Box>
+            <Box grow="Yes" basis="No" />
           </Box>
-          <Box alignItems="Center" gap="200">
-            {screenSize !== ScreenSize.Mobile && <Icon size="400" src={Icons.Mail} />}
-            <Text size="H3" truncate>
-              Invites
-            </Text>
-          </Box>
-          <Box grow="Yes" basis="No" />
-        </Box>
-      </PageHeader>
+        </PageHeader>
+      )}
       <Box grow="Yes">
         <Scroll hideTrack visibility="Hover">
           <PageContent>

@@ -17,6 +17,8 @@ import {
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
   APP_COMMUNITY_SETTINGS_PATH,
+  APP_COMMUNITY_INBOX_PATH,
+  APP_INBOX_PATH,
   APP_LOGIN_PATH,
   APP_REGISTER_PATH,
   LOGIN_PATH,
@@ -203,6 +205,17 @@ export const getAppCommunitySettingsPath = (communityIdOrAlias: string): string 
     communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
   };
   return generatePath(APP_COMMUNITY_SETTINGS_PATH, params);
+};
+/**
+ * The inbox inside the /app shell, scoped to a community when one is open so
+ * the shell keeps its Home/Chat navigation for it.
+ */
+export const getAppInboxPath = (communityIdOrAlias?: string): string => {
+  if (!communityIdOrAlias) return APP_INBOX_PATH;
+  const params = {
+    communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
+  };
+  return generatePath(APP_COMMUNITY_INBOX_PATH, params);
 };
 export const getAppLoginPath = (server?: string): string => {
   const params = server ? { server: encodeURIComponent(server) } : undefined;

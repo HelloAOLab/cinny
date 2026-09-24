@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAppCommunityChatPath,
   getAppCommunityChatRoomPath,
+  getAppInboxPath,
   getLoginPathForRedirect,
   getSpaceFeedPath,
 } from './pathUtils';
@@ -27,6 +28,16 @@ describe('getAppCommunityChatRoomPath', () => {
     expect(getAppCommunityChatRoomPath('!space:example.org', '#general:example.org')).toBe(
       '/app/!space%3Aexample.org/chat/%23general%3Aexample.org'
     );
+  });
+});
+
+describe('getAppInboxPath', () => {
+  it('builds the inbox path scoped to a community', () => {
+    expect(getAppInboxPath('!space:example.org')).toBe('/app/!space%3Aexample.org/inbox');
+  });
+
+  it('falls back to the unscoped inbox path without a community', () => {
+    expect(getAppInboxPath()).toBe('/app/inbox/');
   });
 });
 
