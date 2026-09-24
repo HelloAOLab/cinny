@@ -33,9 +33,10 @@ type AppSidebarProps = {
   communities: Room[];
   currentCommunityId?: string;
   /** Section highlighted in the nav; none on pages like community settings. */
-  activeSection?: 'home' | 'chat';
+  activeSection?: 'home' | 'chat' | 'search';
   onOpenHome: () => void;
   onOpenChat: () => void;
+  onOpenSearch: () => void;
   onSelectCommunity: (communityId: string) => void;
   onCreateCommunity: () => void;
 };
@@ -50,6 +51,7 @@ export function AppSidebar({
   activeSection,
   onOpenHome,
   onOpenChat,
+  onOpenSearch,
   onSelectCommunity,
   onCreateCommunity,
 }: AppSidebarProps) {
@@ -71,7 +73,12 @@ export function AppSidebar({
             disabled={!currentCommunityId}
             onClick={onOpenChat}
           />
-          <SidebarNavItem label="Search" icon={<SearchIcon />} />
+          <SidebarNavItem
+            label="Search"
+            icon={<SearchIcon />}
+            active={activeSection === 'search'}
+            onClick={onOpenSearch}
+          />
           <SidebarNavItem label="Prayer" icon={<PrayerIcon size={24} />} />
           <SidebarNavItem label="Video stories" icon={<VideoIcon />} />
         </nav>
