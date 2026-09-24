@@ -33,6 +33,10 @@ export const IconButton = style({
   cursor: 'pointer',
 });
 
+export const IconButtonActive = style({
+  color: '#1596ce',
+});
+
 export const HeaderTitle = style({
   fontSize: '22px',
   fontWeight: 800,
@@ -97,6 +101,14 @@ export const ScrollArea = style({
   overflow: 'auto',
   padding: '16px 0 96px',
   position: 'relative',
+});
+
+// For pages that manage their own scrolling below the mobile header.
+export const FillArea = style({
+  flexGrow: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
 });
 
 export const ShareFab = style({

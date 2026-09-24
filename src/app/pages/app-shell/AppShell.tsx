@@ -22,7 +22,6 @@ import { AppOutletContext } from './AppOutletContext';
 import { AppSidebar } from './AppSidebar';
 import { AppDialogFrame } from './AppDialogFrame';
 import {
-  BellIcon,
   ChatIcon,
   HomeIcon,
   MailIcon,
@@ -33,11 +32,13 @@ import {
   VideoIcon,
 } from './AppIcons';
 import { isAppChatSplitLayout, isAppDesktopLayout } from './appLayout';
-import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
+import { getAppCommunityChatPath, getAppCommunityPath, getAppInboxPath } from '../pathUtils';
 import {
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
+  APP_COMMUNITY_INBOX_PATH,
   APP_COMMUNITY_SETTINGS_PATH,
+  APP_INBOX_PATH,
 } from '../paths';
 import * as css from './AppShell.css';
 
@@ -65,11 +66,19 @@ export function AppShell() {
     caseSensitive: true,
     end: true,
   });
+  const inboxMatch = useMatch({ path: APP_INBOX_PATH, caseSensitive: true, end: true });
+  const communityInboxMatch = useMatch({
+    path: APP_COMMUNITY_INBOX_PATH,
+    caseSensitive: true,
+    end: true,
+  });
   const chatMode = !!chatListMatch || !!chatRoomMatch;
+  const inboxMode = !!inboxMatch || !!communityInboxMatch;
+  const homeMode = !chatMode && !inboxMode;
   const screenSize = useScreenSizeContext();
   const desktop = isAppDesktopLayout(screenSize);
-  // Rooms, and the chat list/room split, manage their own scrolling.
-  const chatFillsMain = !!chatRoomMatch || (chatMode && isAppChatSplitLayout(screenSize));
+  // Rooms, the chat list/room split and the inbox manage their own scrolling.
+  const fillsMain = !!chatRoomMatch || inboxMode || (chatMode && isAppChatSplitLayout(screenSize));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
@@ -121,13 +130,13 @@ export function AppShell() {
       <button
         type="button"
         aria-label="Home"
-        aria-current={!chatMode ? 'page' : undefined}
-        className={`${css.NavButton} ${css.NavButtonLink} ${!chatMode ? css.NavButtonActive : ''}`}
+        aria-current={homeMode ? 'page' : undefined}
+        className={`${css.NavButton} ${css.NavButtonLink} ${homeMode ? css.NavButtonActive : ''}`}
         disabled={!communityIdOrAlias}
         onClick={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
       >
         <HomeIcon />
-        {!chatMode && <span className={css.NavButtonLabel}>Home</span>}
+        {homeMode && <span className={css.NavButtonLabel}>Home</span>}
       </button>
       <button type="button" aria-label="Search" className={css.NavButton}>
         <SearchIcon />
@@ -182,10 +191,13 @@ export function AppShell() {
     <>
       <div className={css.HeaderSpacer} />
       {joinedCommunity && <CommunitySettingsButton community={joinedCommunity} />}
-      <button type="button" aria-label="Notifications" className={css.IconButton}>
-        <BellIcon />
-      </button>
-      <button type="button" aria-label="Messages" className={css.IconButton}>
+      <button
+        type="button"
+        aria-label="Inbox"
+        aria-current={inboxMode ? 'page' : undefined}
+        className={`${css.IconButton} ${inboxMode ? css.IconButtonActive : ''}`}
+        onClick={() => navigate(getAppInboxPath(communityIdOrAlias))}
+      >
         <MailIcon />
       </button>
       {accountButton}
@@ -256,7 +268,18 @@ export function AppShell() {
 
   let activeSection: 'home' | 'chat' | undefined = 'home';
   if (chatMode) activeSection = 'chat';
-  else if (settingsMatch) activeSection = undefined;
+  else if (settingsMatch || inboxMode) activeSection = undefined;
+
+  // Switching community keeps the user in the section they're in.
+  const getSectionPath = (communityId: string): string => {
+    if (inboxMode) return getAppInboxPath(communityId);
+    if (chatMode) return getAppCommunityChatPath(communityId);
+    return getAppCommunityPath(communityId);
+  };
+
+  let headerTitle = 'Posts';
+  if (chatMode) headerTitle = 'Chat';
+  else if (inboxMode) headerTitle = 'Inbox';
 
   if (desktop) {
     return (
@@ -271,11 +294,7 @@ export function AppShell() {
           onOpenChat={() =>
             communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))
           }
-          onSelectCommunity={(communityId) =>
-            navigate(
-              chatMode ? getAppCommunityChatPath(communityId) : getAppCommunityPath(communityId)
-            )
-          }
+          onSelectCommunity={(communityId) => navigate(getSectionPath(communityId))}
           onCreateCommunity={() => setCreateCommunityOpen(true)}
         />
 
@@ -288,22 +307,22 @@ export function AppShell() {
           ) : (
             <>
               <header className={`${css.Header} ${css.DesktopHeader}`}>
-                <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
+                <span className={css.HeaderTitle}>{headerTitle}</span>
                 {community && <span className={css.DesktopHeaderCommunity}>{community.name}</span>}
                 {headerActions}
               </header>
 
-              {chatFillsMain && (
+              {fillsMain && (
                 <div className={css.DesktopChatArea}>
                   <Outlet context={outletContext} />
                 </div>
               )}
-              {!chatFillsMain && !chatMode && (
+              {!fillsMain && homeMode && (
                 <div className={css.DesktopTabsBar}>
                   <div className={css.DesktopColumn}>{tabs}</div>
                 </div>
               )}
-              {!chatFillsMain && (
+              {!fillsMain && (
                 <div className={`${css.ScrollArea} ${css.DesktopScrollArea}`}>
                   <div className={css.DesktopColumn}>
                     <Outlet context={outletContext} />
@@ -342,17 +361,23 @@ export function AppShell() {
         >
           <MenuIcon />
         </button>
-        <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
+        <span className={css.HeaderTitle}>{headerTitle}</span>
         {headerActions}
       </header>
 
-      {!chatMode && tabs}
+      {homeMode && tabs}
 
-      <div className={css.ScrollArea}>
-        <Outlet context={outletContext} />
-      </div>
+      {inboxMode ? (
+        <div className={css.FillArea}>
+          <Outlet context={outletContext} />
+        </div>
+      ) : (
+        <div className={css.ScrollArea}>
+          <Outlet context={outletContext} />
+        </div>
+      )}
 
-      {!chatMode && (
+      {homeMode && (
         <button
           type="button"
           className={css.ShareFab}
@@ -370,7 +395,7 @@ export function AppShell() {
         open={drawerOpen}
         communities={joinedCommunities}
         currentCommunityId={communityIdOrAlias}
-        getCommunityPath={chatMode ? getAppCommunityChatPath : getAppCommunityPath}
+        getCommunityPath={getSectionPath}
         onCreateCommunity={() => {
           setDrawerOpen(false);
           setCreateCommunityOpen(true);

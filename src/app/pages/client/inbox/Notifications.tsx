@@ -561,7 +561,14 @@ const useNotificationsSearchParams = (
 
 const DEFAULT_REFRESH_MS = 7000;
 
-export function Notifications() {
+type NotificationsProps = {
+  /** Replaces the default room navigation, e.g. to open rooms in the /app shell. */
+  onOpenRoom?: (roomId: string, eventId: string) => void;
+  /** Hides the page header when the embedding screen supplies its own. */
+  hideHeader?: boolean;
+};
+
+export function Notifications({ onOpenRoom, hideHeader }: NotificationsProps = {}) {
   const mx = useMatrixClient();
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
@@ -636,28 +643,30 @@ export function Notifications() {
 
   return (
     <Page>
-      <PageHeader balance>
-        <Box grow="Yes" gap="200">
-          <Box grow="Yes" basis="No">
-            {screenSize === ScreenSize.Mobile && (
-              <BackRouteHandler>
-                {(onBack) => (
-                  <IconButton onClick={onBack}>
-                    <Icon src={Icons.ArrowLeft} />
-                  </IconButton>
-                )}
-              </BackRouteHandler>
-            )}
+      {!hideHeader && (
+        <PageHeader balance>
+          <Box grow="Yes" gap="200">
+            <Box grow="Yes" basis="No">
+              {screenSize === ScreenSize.Mobile && (
+                <BackRouteHandler>
+                  {(onBack) => (
+                    <IconButton onClick={onBack}>
+                      <Icon src={Icons.ArrowLeft} />
+                    </IconButton>
+                  )}
+                </BackRouteHandler>
+              )}
+            </Box>
+            <Box alignItems="Center" gap="200">
+              {screenSize !== ScreenSize.Mobile && <Icon size="400" src={Icons.Message} />}
+              <Text size="H3" truncate>
+                Notification Messages
+              </Text>
+            </Box>
+            <Box grow="Yes" basis="No" />
           </Box>
-          <Box alignItems="Center" gap="200">
-            {screenSize !== ScreenSize.Mobile && <Icon size="400" src={Icons.Message} />}
-            <Text size="H3" truncate>
-              Notification Messages
-            </Text>
-          </Box>
-          <Box grow="Yes" basis="No" />
-        </Box>
-      </PageHeader>
+        </PageHeader>
+      )}
 
       <Box style={{ position: 'relative' }} grow="Yes">
         <Scroll ref={scrollRef} hideTrack visibility="Hover">
@@ -729,7 +738,7 @@ export function Notifications() {
                           mediaAutoLoad={mediaAutoLoad}
                           urlPreview={urlPreview}
                           hideActivity={hideActivity}
-                          onOpen={navigateRoom}
+                          onOpen={onOpenRoom ?? navigateRoom}
                           legacyUsernameColor={
                             legacyUsernameColor || mDirects.has(groupRoom.roomId)
                           }

@@ -34,6 +34,7 @@ import {
   _APP_CHAT_PATH,
   _APP_CHAT_ROOM_PATH,
   _APP_SETTINGS_PATH,
+  _APP_INBOX_PATH,
   APP_LOGIN_PATH,
   APP_REGISTER_PATH,
 } from './paths';
@@ -70,6 +71,7 @@ import { AppAuthLayout, AppLogin, AppRegister } from './app-shell/auth';
 import { AppFeedScreen } from '../features/app-feed';
 import { AppChatListScreen, AppChatRoomScreen } from '../features/app-chat';
 import { AppCommunitySettingsScreen } from '../features/community-settings';
+import { AppInboxScreen } from '../features/app-inbox';
 import { Notifications, Inbox, Invites } from './client/inbox';
 import { setAfterLoginRedirectPath } from './afterLoginRedirectPath';
 import { Room } from '../features/room';
@@ -258,6 +260,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
         </Route>
         <Route path={APP_PATH} element={<AppShell />}>
           <Route index element={<AppIndexRedirect />} />
+          <Route path={_APP_INBOX_PATH} element={<AppInboxScreen />} />
           <Route
             path=":communityIdOrAlias/"
             element={
@@ -270,6 +273,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
             <Route path={_APP_CHAT_PATH} element={<AppChatListScreen />} />
             <Route path={_APP_CHAT_ROOM_PATH} element={<AppChatRoomScreen />} />
             <Route path={_APP_SETTINGS_PATH} element={<AppCommunitySettingsScreen />} />
+            <Route path={_APP_INBOX_PATH} element={<AppInboxScreen />} />
           </Route>
         </Route>
         <Route
