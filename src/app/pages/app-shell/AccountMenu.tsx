@@ -56,6 +56,21 @@ const SETTINGS_ICON = (
   </svg>
 );
 
+const SECURITY_ICON = (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
 type AccountMenuProps = {
   open: boolean;
   displayName?: string;
@@ -63,6 +78,8 @@ type AccountMenuProps = {
   /** Opens the invite flow; the menu item is hidden when omitted. */
   onInvite?: () => void;
   onOpenSettings: () => void;
+  /** Opens settings on the security (device verification) section. */
+  onOpenSecurity: () => void;
   onClose: () => void;
 };
 
@@ -72,6 +89,7 @@ export function AccountMenu({
   userId,
   onInvite,
   onOpenSettings,
+  onOpenSecurity,
   onClose,
 }: AccountMenuProps) {
   const mx = useMatrixClient();
@@ -168,6 +186,18 @@ export function AccountMenu({
               >
                 {SETTINGS_ICON}
                 Account settings
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={css.MenuItem}
+                onClick={() => {
+                  onClose();
+                  onOpenSecurity();
+                }}
+              >
+                {SECURITY_ICON}
+                Security
               </button>
               <button
                 type="button"
