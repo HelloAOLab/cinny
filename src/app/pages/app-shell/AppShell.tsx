@@ -265,8 +265,6 @@ export function AppShell() {
           communities={joinedCommunities}
           currentCommunityId={communityIdOrAlias}
           activeSection={activeSection}
-          canShare={joinedCommunities.length > 0}
-          onShare={() => setShareFlowOpen(true)}
           onOpenHome={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
           onOpenChat={() =>
             communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))
@@ -311,6 +309,18 @@ export function AppShell() {
                 </div>
               )}
             </>
+          )}
+
+          {!settingsMatch && !chatMode && (
+            <button
+              type="button"
+              className={`${css.ShareFab} ${css.DesktopShareFab}`}
+              disabled={joinedCommunities.length === 0}
+              onClick={() => setShareFlowOpen(true)}
+            >
+              <PlusIcon />
+              Share
+            </button>
           )}
         </div>
 

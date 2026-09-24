@@ -19,30 +19,6 @@ export const Top = style({
   gap: '14px',
 });
 
-export const ShareButton = style({
-  background: '#1596ce',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '14px',
-  height: '48px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  fontFamily: 'inherit',
-  fontWeight: 700,
-  fontSize: '16px',
-  boxShadow: '0 6px 16px rgba(21, 150, 206, 0.3)',
-  cursor: 'pointer',
-  selectors: {
-    '&:disabled': {
-      opacity: 0.5,
-      cursor: 'default',
-      boxShadow: 'none',
-    },
-  },
-});
-
 export const Nav = style({
   display: 'flex',
   flexDirection: 'column',
