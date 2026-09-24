@@ -71,7 +71,14 @@ export const Tabs = style({
   gap: '4px',
   padding: '4px 18px 0',
   overflowX: 'auto',
+  overflowY: 'hidden',
+  scrollbarWidth: 'none',
   borderBottom: '1px solid #cdd9df',
+});
+
+// Tabs can still be swiped/scrolled horizontally; just hide the scrollbar chrome.
+globalStyle(`${Tabs}::-webkit-scrollbar`, {
+  display: 'none',
 });
 
 export const Tab = style({
@@ -89,7 +96,6 @@ export const TabActive = style({
   fontWeight: 800,
   color: '#1596ce',
   borderBottom: '3px solid #1596ce',
-  marginBottom: '-1px',
 });
 
 export const ScrollArea = style({
