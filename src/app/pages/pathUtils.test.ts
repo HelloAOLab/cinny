@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAppCommunityChatPath,
   getAppCommunityChatRoomPath,
+  getLoginPathForRedirect,
   getSpaceFeedPath,
 } from './pathUtils';
 
@@ -26,5 +27,22 @@ describe('getAppCommunityChatRoomPath', () => {
     expect(getAppCommunityChatRoomPath('!space:example.org', '#general:example.org')).toBe(
       '/app/!space%3Aexample.org/chat/%23general%3Aexample.org'
     );
+  });
+});
+
+describe('getLoginPathForRedirect', () => {
+  it('defaults to the /app login when there is no redirect path', () => {
+    expect(getLoginPathForRedirect()).toBe('/app/login');
+    expect(getLoginPathForRedirect('/')).toBe('/app/login');
+    expect(getLoginPathForRedirect('/?foo=bar')).toBe('/app/login');
+  });
+
+  it('uses the /app login for /app paths', () => {
+    expect(getLoginPathForRedirect('/app/!space%3Aexample.org/chat')).toBe('/app/login');
+  });
+
+  it('uses the legacy login for legacy client paths', () => {
+    expect(getLoginPathForRedirect('/home/')).toBe('/login');
+    expect(getLoginPathForRedirect('/direct/')).toBe('/login');
   });
 });

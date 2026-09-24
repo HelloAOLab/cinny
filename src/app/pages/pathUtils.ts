@@ -212,3 +212,14 @@ export const getAppRegisterPath = (server?: string): string => {
   const params = server ? { server: encodeURIComponent(server) } : undefined;
   return generatePath(APP_REGISTER_PATH, params);
 };
+
+/**
+ * Picks the login page for a visitor who isn't signed in. The /app shell is
+ * the default; only a visitor bounced from a legacy client URL (e.g. /home/)
+ * is sent to the legacy login page.
+ */
+export const getLoginPathForRedirect = (afterLoginPath?: string): string => {
+  const pathname = afterLoginPath?.split(/[?#]/)[0] ?? ROOT_PATH;
+  if (pathname === ROOT_PATH || pathname.startsWith(APP_PATH)) return getAppLoginPath();
+  return getLoginPath();
+};
