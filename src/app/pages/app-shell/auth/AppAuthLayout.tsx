@@ -7,7 +7,6 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
-import '@fontsource-variable/plus-jakarta-sans';
 import {
   clientAllowedServer,
   clientDefaultServer,

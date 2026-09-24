@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Outlet, useMatch, useNavigate, useParams } from 'react-router-dom';
-import '@fontsource-variable/plus-jakarta-sans';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
