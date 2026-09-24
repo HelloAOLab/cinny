@@ -34,7 +34,12 @@ import {
   VideoIcon,
 } from './AppIcons';
 import { isAppChatSplitLayout, isAppDesktopLayout } from './appLayout';
-import { getAppCommunityChatPath, getAppCommunityPath, getAppInboxPath } from '../pathUtils';
+import {
+  getAppCommunityChatPath,
+  getAppCommunityPath,
+  getAppInboxPath,
+  getAppPath,
+} from '../pathUtils';
 import {
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
@@ -117,6 +122,11 @@ export function AppShell() {
     navigate(getAppCommunityPath(communityId));
   };
 
+  // Without a community, Home falls back to the index page, which shows the
+  // "No communities yet" empty state.
+  const openHome = () =>
+    navigate(communityIdOrAlias ? getAppCommunityPath(communityIdOrAlias) : getAppPath());
+
   const outletContext: AppOutletContext = {
     postTypeFilter,
     onCreateCommunity: () => setCreateCommunityOpen(true),
@@ -135,8 +145,7 @@ export function AppShell() {
         aria-label="Home"
         aria-current={homeMode ? 'page' : undefined}
         className={`${css.NavButton} ${css.NavButtonLink} ${homeMode ? css.NavButtonActive : ''}`}
-        disabled={!communityIdOrAlias}
-        onClick={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
+        onClick={openHome}
       >
         <HomeIcon />
         {homeMode && <span className={css.NavButtonLabel}>Home</span>}
@@ -298,7 +307,7 @@ export function AppShell() {
           communities={joinedCommunities}
           currentCommunityId={communityIdOrAlias}
           activeSection={activeSection}
-          onOpenHome={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
+          onOpenHome={openHome}
           onOpenChat={() =>
             communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))
           }
