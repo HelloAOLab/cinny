@@ -45,7 +45,7 @@ import {
   getHomeFeedPath,
   getHomePath,
   getInboxNotificationsPath,
-  getLoginPath,
+  getLoginPathForRedirect,
   getOriginBaseUrl,
   getSpaceLobbyPath,
 } from './pathUtils';
@@ -108,12 +108,8 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
       <Route
         index
         loader={() => {
-          if (getFallbackSession()) return redirect(getHomePath());
-          const afterLoginPath = getAppPathFromHref(getOriginBaseUrl(), window.location.href);
-          if (afterLoginPath) setAfterLoginRedirectPath(afterLoginPath);
-          return redirect(
-            afterLoginPath?.startsWith(APP_PATH) ? getAppLoginPath() : getLoginPath()
-          );
+          if (getFallbackSession()) return redirect(getAppPath());
+          return redirect(getAppLoginPath());
         }}
       />
       <Route
@@ -164,9 +160,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
               window.location.href
             );
             if (afterLoginPath) setAfterLoginRedirectPath(afterLoginPath);
-            return redirect(
-              afterLoginPath?.startsWith(APP_PATH) ? getAppLoginPath() : getLoginPath()
-            );
+            return redirect(getLoginPathForRedirect(afterLoginPath));
           }
           return null;
         }}
