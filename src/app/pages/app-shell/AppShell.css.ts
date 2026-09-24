@@ -5,6 +5,10 @@ export const Shell = style({
   color: '#1e2a32',
   background: '#dce7ec',
   minHeight: '100dvh',
+  // The shell sits in ClientLayout's row flexbox; without growing it would
+  // shrink to its content's width instead of filling the screen.
+  flexGrow: 1,
+  minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
