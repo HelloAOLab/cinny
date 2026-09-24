@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PopOut, RectCords } from 'folds';
 import { MatrixEvent, MsgType, Room } from 'matrix-js-sdk';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
@@ -75,11 +75,18 @@ type AppPostCardProps = {
   room: Room;
   event: MatrixEvent;
   community: Room;
+  /** Scrolls the card into view and highlights it, e.g. when linked to. */
+  focused?: boolean;
   onOpenComments: (room: Room, event: MatrixEvent) => void;
 };
 
-export function AppPostCard({ room, event, community, onOpenComments }: AppPostCardProps) {
+export function AppPostCard({ room, event, community, focused, onOpenComments }: AppPostCardProps) {
   const mx = useMatrixClient();
+  const cardRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (focused) cardRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [focused]);
   const useAuthentication = useMediaAuthentication();
   const mentionClickHandler = useMentionClickHandler(room.roomId);
   const spoilerClickHandler = useSpoilerClickHandler();
@@ -143,7 +150,7 @@ export function AppPostCard({ room, event, community, onOpenComments }: AppPostC
   const handleOpenComments = () => onOpenComments(room, event);
 
   return (
-    <article className={css.Card}>
+    <article ref={cardRef} className={focused ? `${css.Card} ${css.CardFocused}` : css.Card}>
       <div className={css.CardHeader}>
         <span className={css.Avatar}>
           {communityAvatarUrl ? (

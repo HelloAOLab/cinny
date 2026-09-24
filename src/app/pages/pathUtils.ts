@@ -17,6 +17,7 @@ import {
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
   APP_COMMUNITY_SETTINGS_PATH,
+  APP_COMMUNITY_POST_PATH,
   APP_COMMUNITY_INBOX_PATH,
   APP_INBOX_PATH,
   APP_LOGIN_PATH,
@@ -192,13 +193,26 @@ export const getAppCommunityChatPath = (communityIdOrAlias: string): string => {
 };
 export const getAppCommunityChatRoomPath = (
   communityIdOrAlias: string,
-  roomIdOrAlias: string
+  roomIdOrAlias: string,
+  eventId?: string
 ): string => {
   const params = {
     communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
     roomIdOrAlias: encodeURIComponent(roomIdOrAlias),
+    eventId: eventId ? encodeURIComponent(eventId) : null,
   };
   return generatePath(APP_COMMUNITY_CHAT_ROOM_PATH, params);
+};
+/**
+ * A single event in a community's feed: a post, or a comment on one (the feed
+ * then opens that post's comments).
+ */
+export const getAppCommunityPostPath = (communityIdOrAlias: string, eventId: string): string => {
+  const params = {
+    communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
+    eventId: encodeURIComponent(eventId),
+  };
+  return generatePath(APP_COMMUNITY_POST_PATH, params);
 };
 export const getAppCommunitySettingsPath = (communityIdOrAlias: string): string => {
   const params = {
