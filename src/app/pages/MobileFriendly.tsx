@@ -14,10 +14,12 @@ export function MobileFriendlyClientNav({ children }: MobileFriendlyClientNavPro
   const exploreMatch = useMatch({ path: EXPLORE_PATH, caseSensitive: true, end: true });
   const inboxMatch = useMatch({ path: INBOX_PATH, caseSensitive: true, end: true });
 
-  if (
-    screenSize === ScreenSize.Mobile &&
-    !(homeMatch || directMatch || spaceMatch || exploreMatch || inboxMatch)
-  ) {
+  // The icon sidebar is only used on mobile; wider layouts navigate via the /app shell.
+  if (screenSize !== ScreenSize.Mobile) {
+    return null;
+  }
+
+  if (!(homeMatch || directMatch || spaceMatch || exploreMatch || inboxMatch)) {
     return null;
   }
 
