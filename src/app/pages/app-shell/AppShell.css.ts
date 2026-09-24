@@ -193,6 +193,11 @@ export const DesktopMain = style({
   position: 'relative',
 });
 
+export const DesktopShareFab = style({
+  right: '28px',
+  bottom: '28px',
+});
+
 export const DesktopHeader = style({
   padding: '18px 28px 12px',
   gap: '16px',

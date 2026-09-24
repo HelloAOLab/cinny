@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Room } from 'matrix-js-sdk';
-import { ChatIcon, HomeIcon, PlusIcon, PrayerIcon, SearchIcon, VideoIcon } from './AppIcons';
+import { ChatIcon, HomeIcon, PrayerIcon, SearchIcon, VideoIcon } from './AppIcons';
 import { CommunityList, CreateCommunityButton } from './CommunityList';
 import * as css from './AppSidebar.css';
 
@@ -34,8 +34,6 @@ type AppSidebarProps = {
   currentCommunityId?: string;
   /** Section highlighted in the nav; none on pages like community settings. */
   activeSection?: 'home' | 'chat';
-  canShare: boolean;
-  onShare: () => void;
   onOpenHome: () => void;
   onOpenChat: () => void;
   onSelectCommunity: (communityId: string) => void;
@@ -43,16 +41,13 @@ type AppSidebarProps = {
 };
 
 /**
- * Persistent left column of the /app shell's desktop layout: the Share action,
- * the sections that live in the mobile bottom nav, and the community list that
+ * Persistent left column of the /app shell's desktop layout: the sections that live in the mobile bottom nav, and the community list that
  * the mobile drawer holds.
  */
 export function AppSidebar({
   communities,
   currentCommunityId,
   activeSection,
-  canShare,
-  onShare,
   onOpenHome,
   onOpenChat,
   onSelectCommunity,
@@ -61,10 +56,6 @@ export function AppSidebar({
   return (
     <aside className={css.Sidebar}>
       <div className={css.Top}>
-        <button type="button" className={css.ShareButton} disabled={!canShare} onClick={onShare}>
-          <PlusIcon />
-          Share
-        </button>
         <nav className={css.Nav} aria-label="Sections">
           <SidebarNavItem
             label="Home"
