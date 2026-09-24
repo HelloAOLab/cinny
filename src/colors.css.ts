@@ -27,16 +27,16 @@ export const silverTheme = createTheme(color, {
   },
 
   Primary: {
-    Main: '#1245A8',
-    MainHover: '#103E97',
-    MainActive: '#0F3B8F',
-    MainLine: '#0E3786',
+    Main: '#1596CE',
+    MainHover: '#1387B9',
+    MainActive: '#127FAE',
+    MainLine: '#1177A3',
     OnMain: '#FFFFFF',
-    Container: '#C4D0E9',
-    ContainerHover: '#B8C7E5',
-    ContainerActive: '#ACBEE1',
-    ContainerLine: '#A0B5DC',
-    OnContainer: '#0D3076',
+    Container: '#D7ECF6',
+    ContainerHover: '#CAE5F2',
+    ContainerActive: '#BDDFEE',
+    ContainerLine: '#9FD3EA',
+    OnContainer: '#0F6D9C',
   },
 
   Secondary: {
@@ -98,55 +98,157 @@ export const silverTheme = createTheme(color, {
   },
 });
 
-const darkThemeData = {
+// The /app shell's palette: pale blue-grey page background, white cards,
+// slate ink and a sky-blue accent. This is the default light theme, so the
+// rest of the client (rooms, settings, auth) matches the /app chrome.
+export const appLightTheme = createTheme(color, {
   Background: {
-    Container: '#1A1A1A',
-    ContainerHover: '#262626',
-    ContainerActive: '#333333',
-    ContainerLine: '#404040',
-    OnContainer: '#F2F2F2',
+    Container: '#DCE7EC',
+    ContainerHover: '#D0DEE5',
+    ContainerActive: '#C5D5DE',
+    ContainerLine: '#CDD9DF',
+    OnContainer: '#1E2A32',
   },
 
   Surface: {
-    Container: '#262626',
-    ContainerHover: '#333333',
-    ContainerActive: '#404040',
-    ContainerLine: '#4D4D4D',
-    OnContainer: '#F2F2F2',
+    Container: '#FFFFFF',
+    ContainerHover: '#F1F6F9',
+    ContainerActive: '#E7EFF3',
+    ContainerLine: '#E2E9EE',
+    OnContainer: '#1E2A32',
   },
 
   SurfaceVariant: {
-    Container: '#333333',
-    ContainerHover: '#404040',
-    ContainerActive: '#4D4D4D',
-    ContainerLine: '#595959',
-    OnContainer: '#F2F2F2',
+    Container: '#EEF4F7',
+    ContainerHover: '#E2ECF1',
+    ContainerActive: '#D7E4EB',
+    ContainerLine: '#CDD9DF',
+    OnContainer: '#1E2A32',
   },
 
   Primary: {
-    Main: '#BDB6EC',
-    MainHover: '#B2AAE9',
-    MainActive: '#ADA3E8',
-    MainLine: '#A79DE6',
-    OnMain: '#2C2843',
-    Container: '#413C65',
-    ContainerHover: '#494370',
-    ContainerActive: '#50497B',
-    ContainerLine: '#575086',
-    OnContainer: '#E3E1F7',
+    Main: '#1596CE',
+    MainHover: '#1387B9',
+    MainActive: '#127FAE',
+    MainLine: '#1177A3',
+    OnMain: '#FFFFFF',
+    Container: '#D7ECF6',
+    ContainerHover: '#CAE5F2',
+    ContainerActive: '#BDDFEE',
+    ContainerLine: '#9FD3EA',
+    OnContainer: '#0F6D9C',
+  },
+
+  Secondary: {
+    Main: '#1E2A32',
+    MainHover: '#2B3A43',
+    MainActive: '#36464F',
+    MainLine: '#41525C',
+    OnMain: '#FFFFFF',
+    Container: '#E2E9EE',
+    ContainerHover: '#D6E0E6',
+    ContainerActive: '#CAD6DD',
+    ContainerLine: '#BDCBD3',
+    OnContainer: '#2B3A43',
+  },
+
+  Success: {
+    Main: '#2E7D32',
+    MainHover: '#29712D',
+    MainActive: '#276A2B',
+    MainLine: '#246428',
+    OnMain: '#FFFFFF',
+    Container: '#E3F1E4',
+    ContainerHover: '#D7EBD8',
+    ContainerActive: '#CBE4CC',
+    ContainerLine: '#BEDEC0',
+    OnContainer: '#1F5822',
+  },
+
+  Warning: {
+    Main: '#8A6A1F',
+    MainHover: '#7C5F1C',
+    MainActive: '#755A1A',
+    MainLine: '#6E5419',
+    OnMain: '#FFFFFF',
+    Container: '#FAF1DC',
+    ContainerHover: '#F7EBCD',
+    ContainerActive: '#F4E4BE',
+    ContainerLine: '#F0D9A8',
+    OnContainer: '#614A16',
+  },
+
+  Critical: {
+    Main: '#D64545',
+    MainHover: '#C93D3D',
+    MainActive: '#BF3A3A',
+    MainLine: '#B53737',
+    OnMain: '#FFFFFF',
+    Container: '#FBE9E9',
+    ContainerHover: '#F8DDDD',
+    ContainerActive: '#F5D1D1',
+    ContainerLine: '#F0C3C3',
+    OnContainer: '#A32F2F',
+  },
+
+  Other: {
+    FocusRing: 'rgba(21, 150, 206, 0.5)',
+    Shadow: 'rgba(30, 42, 50, 0.18)',
+    Overlay: 'rgba(20, 30, 36, 0.45)',
+  },
+});
+
+// Dark counterpart of the /app palette: the same blue-slate hue family and
+// sky-blue accent, inverted for low light.
+const darkThemeData = {
+  Background: {
+    Container: '#141C21',
+    ContainerHover: '#1D272E',
+    ContainerActive: '#26323A',
+    ContainerLine: '#2F3C45',
+    OnContainer: '#EEF4F7',
+  },
+
+  Surface: {
+    Container: '#1D272E',
+    ContainerHover: '#26323A',
+    ContainerActive: '#2F3C45',
+    ContainerLine: '#384751',
+    OnContainer: '#EEF4F7',
+  },
+
+  SurfaceVariant: {
+    Container: '#26323A',
+    ContainerHover: '#2F3C45',
+    ContainerActive: '#384751',
+    ContainerLine: '#42525D',
+    OnContainer: '#EEF4F7',
+  },
+
+  Primary: {
+    Main: '#6CC4EA',
+    MainHover: '#5BBDE7',
+    MainActive: '#52B9E6',
+    MainLine: '#49B5E4',
+    OnMain: '#0B3A52',
+    Container: '#0F4A69',
+    ContainerHover: '#115374',
+    ContainerActive: '#135B80',
+    ContainerLine: '#15648C',
+    OnContainer: '#D7ECF6',
   },
 
   Secondary: {
     Main: '#FFFFFF',
-    MainHover: '#E5E5E5',
-    MainActive: '#D9D9D9',
-    MainLine: '#CCCCCC',
-    OnMain: '#1A1A1A',
-    Container: '#404040',
-    ContainerHover: '#4D4D4D',
-    ContainerActive: '#595959',
-    ContainerLine: '#666666',
-    OnContainer: '#F2F2F2',
+    MainHover: '#E2E9EE',
+    MainActive: '#D6E0E6',
+    MainLine: '#CAD6DD',
+    OnMain: '#141C21',
+    Container: '#384751',
+    ContainerHover: '#42525D',
+    ContainerActive: '#4C5D68',
+    ContainerLine: '#566873',
+    OnContainer: '#EEF4F7',
   },
 
   Success: {
@@ -189,9 +291,9 @@ const darkThemeData = {
   },
 
   Other: {
-    FocusRing: 'rgba(255, 255, 255, 0.5)',
+    FocusRing: 'rgba(108, 196, 234, 0.5)',
     Shadow: 'rgba(0, 0, 0, 1)',
-    Overlay: 'rgba(0, 0, 0, 0.8)',
+    Overlay: 'rgba(8, 12, 15, 0.8)',
   },
 };
 
