@@ -243,3 +243,10 @@ export const DesktopChatArea = style({
   flexDirection: 'column',
   borderTop: '1px solid #cdd9df',
 });
+
+export const DesktopPageArea = style({
+  flexGrow: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+});

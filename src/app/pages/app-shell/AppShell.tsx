@@ -17,6 +17,7 @@ import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
 import { SharePostComposer } from './SharePostComposer';
 import { CreateCommunityFlow } from './CreateCommunityFlow';
+import { CommunitySettingsButton } from './CommunitySettingsButton';
 import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { AppSidebar } from './AppSidebar';
@@ -34,7 +35,11 @@ import {
 } from './AppIcons';
 import { isAppChatSplitLayout, isAppDesktopLayout } from './appLayout';
 import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
-import { APP_COMMUNITY_CHAT_PATH, APP_COMMUNITY_CHAT_ROOM_PATH } from '../paths';
+import {
+  APP_COMMUNITY_CHAT_PATH,
+  APP_COMMUNITY_CHAT_ROOM_PATH,
+  APP_COMMUNITY_SETTINGS_PATH,
+} from '../paths';
 import * as css from './AppShell.css';
 
 type Tab = { label: string; postType?: PostType };
@@ -53,6 +58,11 @@ export function AppShell() {
   const chatListMatch = useMatch({ path: APP_COMMUNITY_CHAT_PATH, caseSensitive: true, end: true });
   const chatRoomMatch = useMatch({
     path: APP_COMMUNITY_CHAT_ROOM_PATH,
+    caseSensitive: true,
+    end: true,
+  });
+  const settingsMatch = useMatch({
+    path: APP_COMMUNITY_SETTINGS_PATH,
     caseSensitive: true,
     end: true,
   });
@@ -79,6 +89,8 @@ export function AppShell() {
     .filter((room): room is NonNullable<typeof room> => !!room);
 
   const community = communityIdOrAlias ? mx.getRoom(communityIdOrAlias) : undefined;
+  const joinedCommunity =
+    community && joinedCommunityIds.includes(community.roomId) ? community : undefined;
 
   const handleShareComplete = (
     postType: PostType,
@@ -170,6 +182,7 @@ export function AppShell() {
   const headerActions = (
     <>
       <div className={css.HeaderSpacer} />
+      {joinedCommunity && <CommunitySettingsButton community={joinedCommunity} />}
       <button type="button" aria-label="Notifications" className={css.IconButton}>
         <BellIcon />
       </button>
@@ -242,13 +255,17 @@ export function AppShell() {
     </>
   );
 
+  let activeSection: 'home' | 'chat' | undefined = 'home';
+  if (chatMode) activeSection = 'chat';
+  else if (settingsMatch) activeSection = undefined;
+
   if (desktop) {
     return (
       <div className={`${css.Shell} ${css.DesktopShell}`}>
         <AppSidebar
           communities={joinedCommunities}
           currentCommunityId={communityIdOrAlias}
-          chatMode={chatMode}
+          activeSection={activeSection}
           canShare={joinedCommunities.length > 0}
           onShare={() => setShareFlowOpen(true)}
           onOpenHome={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
@@ -264,28 +281,37 @@ export function AppShell() {
         />
 
         <div className={css.DesktopMain}>
-          <header className={`${css.Header} ${css.DesktopHeader}`}>
-            <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
-            {community && <span className={css.DesktopHeaderCommunity}>{community.name}</span>}
-            {headerActions}
-          </header>
-
-          {chatFillsMain && (
-            <div className={css.DesktopChatArea}>
+          {settingsMatch ? (
+            // The settings page brings its own header with a back link.
+            <div className={css.DesktopPageArea}>
               <Outlet context={outletContext} />
             </div>
-          )}
-          {!chatFillsMain && !chatMode && (
-            <div className={css.DesktopTabsBar}>
-              <div className={css.DesktopColumn}>{tabs}</div>
-            </div>
-          )}
-          {!chatFillsMain && (
-            <div className={`${css.ScrollArea} ${css.DesktopScrollArea}`}>
-              <div className={css.DesktopColumn}>
-                <Outlet context={outletContext} />
-              </div>
-            </div>
+          ) : (
+            <>
+              <header className={`${css.Header} ${css.DesktopHeader}`}>
+                <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
+                {community && <span className={css.DesktopHeaderCommunity}>{community.name}</span>}
+                {headerActions}
+              </header>
+
+              {chatFillsMain && (
+                <div className={css.DesktopChatArea}>
+                  <Outlet context={outletContext} />
+                </div>
+              )}
+              {!chatFillsMain && !chatMode && (
+                <div className={css.DesktopTabsBar}>
+                  <div className={css.DesktopColumn}>{tabs}</div>
+                </div>
+              )}
+              {!chatFillsMain && (
+                <div className={`${css.ScrollArea} ${css.DesktopScrollArea}`}>
+                  <div className={css.DesktopColumn}>
+                    <Outlet context={outletContext} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -294,8 +320,9 @@ export function AppShell() {
     );
   }
 
-  if (chatRoomMatch) {
-    // A room's own header, timeline and composer take the full screen.
+  if (chatRoomMatch || settingsMatch) {
+    // A room's own header, timeline and composer take the full screen, as
+    // does the community settings page.
     return (
       <div className={css.Shell}>
         <div className={css.RoomArea}>

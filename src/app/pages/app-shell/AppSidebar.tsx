@@ -32,7 +32,8 @@ function SidebarNavItem({ label, icon, active, disabled, onClick }: SidebarNavIt
 type AppSidebarProps = {
   communities: Room[];
   currentCommunityId?: string;
-  chatMode: boolean;
+  /** Section highlighted in the nav; none on pages like community settings. */
+  activeSection?: 'home' | 'chat';
   canShare: boolean;
   onShare: () => void;
   onOpenHome: () => void;
@@ -49,7 +50,7 @@ type AppSidebarProps = {
 export function AppSidebar({
   communities,
   currentCommunityId,
-  chatMode,
+  activeSection,
   canShare,
   onShare,
   onOpenHome,
@@ -68,14 +69,14 @@ export function AppSidebar({
           <SidebarNavItem
             label="Home"
             icon={<HomeIcon />}
-            active={!chatMode}
+            active={activeSection === 'home'}
             disabled={!currentCommunityId}
             onClick={onOpenHome}
           />
           <SidebarNavItem
             label="Chat"
             icon={<ChatIcon />}
-            active={chatMode}
+            active={activeSection === 'chat'}
             disabled={!currentCommunityId}
             onClick={onOpenChat}
           />

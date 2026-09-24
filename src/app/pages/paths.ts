@@ -98,5 +98,7 @@ export const _APP_CHAT_PATH = 'chat/';
 export const _APP_CHAT_ROOM_PATH = 'chat/:roomIdOrAlias/';
 export const APP_COMMUNITY_CHAT_PATH = `/app/:communityIdOrAlias/${_APP_CHAT_PATH}`;
 export const APP_COMMUNITY_CHAT_ROOM_PATH = `/app/:communityIdOrAlias/${_APP_CHAT_ROOM_PATH}`;
+export const _APP_SETTINGS_PATH = 'settings/';
+export const APP_COMMUNITY_SETTINGS_PATH = `/app/:communityIdOrAlias/${_APP_SETTINGS_PATH}`;
 export const APP_LOGIN_PATH = '/app/login/:server?/';
 export const APP_REGISTER_PATH = '/app/register/:server?/';
