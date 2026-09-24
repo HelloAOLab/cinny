@@ -21,6 +21,8 @@ import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { AppSidebar } from './AppSidebar';
 import { AppDialogFrame } from './AppDialogFrame';
+import { Settings } from '../../features/settings';
+import { Modal500 } from '../../components/Modal500';
 import {
   BellIcon,
   ChatIcon,
@@ -75,6 +77,7 @@ export function AppShell() {
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
   const [createCommunityOpen, setCreateCommunityOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [postTypeFilter, setPostTypeFilter] = useState<PostType>();
   const [composerState, setComposerState] = useState<{
     postType: PostType;
@@ -173,6 +176,7 @@ export function AppShell() {
         displayName={profile.displayName}
         userId={userId}
         onInvite={registrationBot ? () => setInviteOpen(true) : undefined}
+        onOpenSettings={() => setSettingsOpen(true)}
         onClose={() => setAccountMenuOpen(false)}
       />
     </div>
@@ -227,6 +231,12 @@ export function AppShell() {
         <AppDialogFrame desktop={desktop}>
           <InviteFlow open botConfig={registrationBot} onClose={() => setInviteOpen(false)} />
         </AppDialogFrame>
+      )}
+
+      {settingsOpen && (
+        <Modal500 requestClose={() => setSettingsOpen(false)}>
+          <Settings requestClose={() => setSettingsOpen(false)} />
+        </Modal500>
       )}
 
       {shareFlowOpen && (
