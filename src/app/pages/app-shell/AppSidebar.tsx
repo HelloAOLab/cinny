@@ -61,7 +61,6 @@ export function AppSidebar({
             label="Home"
             icon={<HomeIcon />}
             active={activeSection === 'home'}
-            disabled={!currentCommunityId}
             onClick={onOpenHome}
           />
           <SidebarNavItem
