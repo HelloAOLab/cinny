@@ -16,10 +16,15 @@ import { AccountMenu } from './AccountMenu';
 import { SharePostFlow } from './SharePostFlow';
 import { SharePostComposer } from './SharePostComposer';
 import { CreateCommunityFlow } from './CreateCommunityFlow';
+import { CommunitySettingsButton } from './CommunitySettingsButton';
 import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
-import { APP_COMMUNITY_CHAT_PATH, APP_COMMUNITY_CHAT_ROOM_PATH } from '../paths';
+import {
+  APP_COMMUNITY_CHAT_PATH,
+  APP_COMMUNITY_CHAT_ROOM_PATH,
+  APP_COMMUNITY_SETTINGS_PATH,
+} from '../paths';
 import * as css from './AppShell.css';
 
 type Tab = { label: string; postType?: PostType };
@@ -38,6 +43,11 @@ export function AppShell() {
   const chatListMatch = useMatch({ path: APP_COMMUNITY_CHAT_PATH, caseSensitive: true, end: true });
   const chatRoomMatch = useMatch({
     path: APP_COMMUNITY_CHAT_ROOM_PATH,
+    caseSensitive: true,
+    end: true,
+  });
+  const settingsMatch = useMatch({
+    path: APP_COMMUNITY_SETTINGS_PATH,
     caseSensitive: true,
     end: true,
   });
@@ -60,6 +70,8 @@ export function AppShell() {
     .filter((room): room is NonNullable<typeof room> => !!room);
 
   const community = communityIdOrAlias ? mx.getRoom(communityIdOrAlias) : undefined;
+  const joinedCommunity =
+    community && joinedCommunityIds.includes(community.roomId) ? community : undefined;
 
   const handleShareComplete = (
     postType: PostType,
@@ -180,8 +192,9 @@ export function AppShell() {
     </nav>
   );
 
-  if (chatRoomMatch) {
-    // A room's own header, timeline and composer take the full screen.
+  if (chatRoomMatch || settingsMatch) {
+    // A room's own header, timeline and composer take the full screen, as
+    // does the community settings page.
     return (
       <div className={css.Shell}>
         <div className={css.RoomArea}>
@@ -214,6 +227,7 @@ export function AppShell() {
         </button>
         <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
         <div className={css.HeaderSpacer} />
+        {joinedCommunity && <CommunitySettingsButton community={joinedCommunity} />}
         <button type="button" aria-label="Notifications" className={css.IconButton}>
           <svg
             width="24"
