@@ -5,8 +5,10 @@ import {
   compareCommunityMembers,
   getCommunityRole,
   getCommunityVisibility,
+  getInviteBlockReason,
   getSpaceVisibilityChanges,
   isCommunityAdmin,
+  parseInviteUserId,
   shouldUpdateChildJoinRule,
 } from './communitySettings';
 
@@ -123,5 +125,42 @@ describe('compareCommunityMembers', () => {
       '@c:x',
       '@d:x',
     ]);
+  });
+});
+
+describe('parseInviteUserId', () => {
+  it('accepts full user IDs', () => {
+    expect(parseInviteUserId('@alice:example.org', 'home.org')).toBe('@alice:example.org');
+    expect(parseInviteUserId('  @alice:example.org ', 'home.org')).toBe('@alice:example.org');
+  });
+
+  it('adds a missing @ to IDs with a server', () => {
+    expect(parseInviteUserId('alice:example.org', 'home.org')).toBe('@alice:example.org');
+  });
+
+  it('puts bare usernames on the default server', () => {
+    expect(parseInviteUserId('alice', 'home.org')).toBe('@alice:home.org');
+    expect(parseInviteUserId('@alice', 'home.org')).toBe('@alice:home.org');
+  });
+
+  it('rejects input that cannot be a user ID', () => {
+    expect(parseInviteUserId('', 'home.org')).toBeUndefined();
+    expect(parseInviteUserId('   ', 'home.org')).toBeUndefined();
+    expect(parseInviteUserId('alice smith', 'home.org')).toBeUndefined();
+    expect(parseInviteUserId('@alice:', 'home.org')).toBeUndefined();
+    expect(parseInviteUserId('alice', undefined)).toBeUndefined();
+  });
+});
+
+describe('getInviteBlockReason', () => {
+  it('blocks members, pending invites and bans', () => {
+    expect(getInviteBlockReason('join')).toBe('is already a member');
+    expect(getInviteBlockReason('invite')).toBe('has already been invited');
+    expect(getInviteBlockReason('ban')).toBe('is banned from this community');
+  });
+
+  it('allows everyone else', () => {
+    expect(getInviteBlockReason(undefined)).toBeUndefined();
+    expect(getInviteBlockReason('leave')).toBeUndefined();
   });
 });

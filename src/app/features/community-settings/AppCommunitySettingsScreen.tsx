@@ -1,7 +1,7 @@
 import React, { FormEventHandler, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAtomValue } from 'jotai';
-import { MatrixError, Room } from 'matrix-js-sdk';
+import { MatrixError, Room, RoomMember } from 'matrix-js-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
@@ -17,7 +17,7 @@ import { useRecursiveChildScopeFactory, useSpaceChildren } from '../../state/hoo
 import { roomToParentsAtom } from '../../state/room/roomToParents';
 import { allRoomsAtom } from '../../state/room-list/roomList';
 import { StateEvent } from '../../../types/matrix/room';
-import { mxcUrlToHttp } from '../../utils/matrix';
+import { getMxIdServer, mxcUrlToHttp } from '../../utils/matrix';
 import { getRoomAvatarUrl } from '../../utils/room';
 import { nameInitials } from '../../utils/common';
 import { useCommunity } from '../../pages/app-shell/CommunityContext';
@@ -29,6 +29,8 @@ import {
   compareCommunityMembers,
   getCommunityRole,
   getCommunityVisibility,
+  getInviteBlockReason,
+  parseInviteUserId,
   setCommunityVisibility,
   SetCommunityVisibilityResult,
 } from './communitySettings';
@@ -349,7 +351,148 @@ function RoomsSection({ community }: { community: Room }) {
   );
 }
 
-function MembersSection({ community }: { community: Room }) {
+function InviteSection({ community, canInvite }: { community: Room; canInvite: boolean }) {
+  const mx = useMatrixClient();
+  const alive = useAlive();
+  const [input, setInput] = useState('');
+  const [invalid, setInvalid] = useState<string>();
+  const [invited, setInvited] = useState<string>();
+  const defaultServer = getMxIdServer(mx.getSafeUserId());
+
+  const [inviteState, invite] = useAsyncCallback<void, MatrixError, [string]>(
+    useCallback(
+      async (userId) => {
+        await mx.invite(community.roomId, userId);
+      },
+      [mx, community.roomId]
+    )
+  );
+  const inviting = inviteState.status === AsyncStatus.Loading;
+
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (evt) => {
+    evt.preventDefault();
+    if (inviting || !input.trim()) return;
+    setInvited(undefined);
+
+    const userId = parseInviteUserId(input, defaultServer);
+    if (!userId) {
+      setInvalid('Enter a username like "alice" or a full ID like "@alice:example.org".');
+      return;
+    }
+    const blockReason = getInviteBlockReason(community.getMember(userId)?.membership);
+    if (blockReason) {
+      setInvalid(`${userId} ${blockReason}.`);
+      return;
+    }
+    setInvalid(undefined);
+    invite(userId).then(() => {
+      if (!alive()) return;
+      setInput('');
+      setInvited(userId);
+    });
+  };
+
+  return (
+    <section className={css.Section}>
+      <span className={css.SectionTitle} id="community-settings-invite-label">
+        Invite people
+      </span>
+      <form className={css.Card} onSubmit={handleSubmit}>
+        <div className={css.InputRow}>
+          <input
+            aria-labelledby="community-settings-invite-label"
+            className={css.Input}
+            value={input}
+            onChange={(evt) => {
+              setInput(evt.target.value);
+              setInvalid(undefined);
+            }}
+            placeholder={defaultServer ? `username or @name:${defaultServer}` : '@name:server'}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            readOnly={!canInvite}
+            disabled={inviting}
+          />
+          <button
+            type="submit"
+            className={css.PrimaryButton}
+            disabled={!canInvite || !input.trim() || inviting}
+          >
+            {inviting ? 'Inviting…' : 'Invite'}
+          </button>
+        </div>
+        {!canInvite && (
+          <span className={css.Hint}>You don&apos;t have permission to invite people.</span>
+        )}
+        {invalid && <span className={css.Error}>{invalid}</span>}
+        {inviteState.status === AsyncStatus.Error && (
+          <span className={css.Error}>{inviteState.error.message || 'Failed to invite'}</span>
+        )}
+        {invited && inviteState.status === AsyncStatus.Success && (
+          <span className={css.Success}>Invited {invited}.</span>
+        )}
+      </form>
+    </section>
+  );
+}
+
+function InvitedMemberRow({
+  community,
+  member,
+  canRevoke,
+}: {
+  community: Room;
+  member: RoomMember;
+  canRevoke: boolean;
+}) {
+  const mx = useMatrixClient();
+  const useAuthentication = useMediaAuthentication();
+  const [revokeState, revoke] = useAsyncCallback<void, MatrixError, []>(
+    useCallback(async () => {
+      await mx.kick(community.roomId, member.userId);
+    }, [mx, community.roomId, member.userId])
+  );
+  const revoking =
+    revokeState.status === AsyncStatus.Loading || revokeState.status === AsyncStatus.Success;
+  const name = member.name || member.userId;
+  const avatarMxc = member.getMxcAvatarUrl();
+  const avatarUrl = avatarMxc
+    ? mxcUrlToHttp(mx, avatarMxc, useAuthentication, 96, 96, 'crop') ?? undefined
+    : undefined;
+
+  return (
+    <div className={css.Row}>
+      <span className={`${css.Avatar} ${css.AvatarRound}`}>
+        {avatarUrl ? (
+          <img className={css.AvatarImage} src={avatarUrl} alt="" />
+        ) : (
+          nameInitials(name, 2)
+        )}
+      </span>
+      <span className={css.RowText}>
+        <span className={css.RowTitle}>{name}</span>
+        {revokeState.status === AsyncStatus.Error ? (
+          <span className={css.Error}>{revokeState.error.message || 'Failed to revoke'}</span>
+        ) : (
+          <span className={css.RowSubtitle}>{member.userId}</span>
+        )}
+      </span>
+      {canRevoke && (
+        <button
+          type="button"
+          className={css.DangerTextButton}
+          disabled={revoking}
+          onClick={() => revoke()}
+        >
+          {revoking ? 'Revoking…' : 'Revoke'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MembersSection({ community, canRevoke }: { community: Room; canRevoke: boolean }) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const powerLevels = usePowerLevels(community);
@@ -373,6 +516,13 @@ function MembersSection({ community }: { community: Room }) {
         }))
         .sort(compareCommunityMembers),
     [members, powerLevels, creators]
+  );
+  const invitedMembers = useMemo(
+    () =>
+      members
+        .filter((member) => member.membership === 'invite')
+        .sort((a, b) => (a.name || a.userId).localeCompare(b.name || b.userId)),
+    [members]
   );
 
   return (
@@ -413,6 +563,21 @@ function MembersSection({ community }: { community: Room }) {
           Show more
         </button>
       )}
+      {invitedMembers.length > 0 && (
+        <>
+          <span className={`${css.SectionTitle} ${css.SubsectionTitle}`}>
+            Invited · {invitedMembers.length}
+          </span>
+          {invitedMembers.map((member) => (
+            <InvitedMemberRow
+              key={member.userId}
+              community={community}
+              member={member}
+              canRevoke={canRevoke}
+            />
+          ))}
+        </>
+      )}
     </section>
   );
 }
@@ -438,8 +603,8 @@ function BackToCommunity({ communityId }: { communityId: string }) {
 
 /**
  * Settings page for a community in the /app shell, for its admins: rename
- * it, set its avatar, switch it between public and private, and browse its
- * rooms and members.
+ * it, set its avatar, switch it between public and private, invite people,
+ * and browse its rooms and members.
  */
 export function AppCommunitySettingsScreen() {
   const mx = useMatrixClient();
@@ -464,8 +629,9 @@ export function AppCommunitySettingsScreen() {
         <div className={css.Body}>
           <ProfileSection community={community} canEdit={canEdit} />
           <VisibilitySection community={community} canEdit={canEdit} />
+          <InviteSection community={community} canInvite={permissions.action('invite', userId)} />
           <RoomsSection community={community} />
-          <MembersSection community={community} />
+          <MembersSection community={community} canRevoke={permissions.action('kick', userId)} />
         </div>
       ) : (
         <AppEmptyState

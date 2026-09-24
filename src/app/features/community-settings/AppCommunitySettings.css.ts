@@ -289,3 +289,14 @@ export const Error = style({
   color: '#c62828',
   padding: '0 4px',
 });
+
+export const Success = style({
+  fontSize: '14px',
+  fontWeight: 600,
+  color: '#2e7d32',
+  padding: '0 4px',
+});
+
+export const SubsectionTitle = style({
+  marginTop: '14px',
+});

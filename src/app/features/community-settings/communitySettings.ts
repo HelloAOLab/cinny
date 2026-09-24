@@ -1,6 +1,6 @@
 import { JoinRule, MatrixClient, RestrictedAllowType, Room } from 'matrix-js-sdk';
 import { RoomJoinRulesEventContent } from 'matrix-js-sdk/lib/types';
-import { StateEvent } from '../../../types/matrix/room';
+import { Membership, StateEvent } from '../../../types/matrix/room';
 import {
   getPowersLevelFromMatrixEvent,
   IPowerLevels,
@@ -9,6 +9,7 @@ import {
 import { getRoomCreatorsForRoomId } from '../../hooks/useRoomCreators';
 import { getRoomPermissionsAPI } from '../../hooks/useRoomPermissions';
 import { getSpaceChildren, getStateEvent } from '../../utils/room';
+import { isUserId } from '../../utils/matrix';
 import {
   CommunityVisibility,
   getCommunityChildJoinRule,
@@ -179,4 +180,41 @@ export const setCommunityVisibility = async (
 
   const results = await Promise.all(updates);
   return { failedRoomIds: results.filter((roomId): roomId is string => !!roomId) };
+};
+
+/**
+ * Turns what an admin typed into the invite field into a Matrix user ID.
+ * Accepts a full ID ("@alice:example.org"), one missing its "@"
+ * ("alice:example.org"), or a bare username ("alice" or "@alice"), which is
+ * taken to be on `defaultServer` - usually the inviter's own homeserver.
+ * Returns undefined when the input can't be a user ID.
+ */
+export const parseInviteUserId = (
+  input: string,
+  defaultServer: string | undefined
+): string | undefined => {
+  const value = input.trim();
+  if (!value) return undefined;
+  const withSigil = value.startsWith('@') ? value : `@${value}`;
+  if (withSigil.includes(':')) return isUserId(withSigil) ? withSigil : undefined;
+  if (!defaultServer) return undefined;
+  const userId = `${withSigil}:${defaultServer}`;
+  return isUserId(userId) ? userId : undefined;
+};
+
+/**
+ * Why a user can't be invited given their current membership in the
+ * community, or undefined when an invite can go ahead.
+ */
+export const getInviteBlockReason = (membership: string | undefined): string | undefined => {
+  switch (membership) {
+    case Membership.Join:
+      return 'is already a member';
+    case Membership.Invite:
+      return 'has already been invited';
+    case Membership.Ban:
+      return 'is banned from this community';
+    default:
+      return undefined;
+  }
 };
