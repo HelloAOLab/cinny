@@ -5,6 +5,7 @@ import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useClientConfig } from '../../hooks/useClientConfig';
+import { useScreenSizeContext } from '../../hooks/useScreenSize';
 import { useSpaces } from '../../state/hooks/roomList';
 import { allRoomsAtom } from '../../state/room-list/roomList';
 import { mxcUrlToHttp } from '../../utils/matrix';
@@ -19,6 +20,20 @@ import { CreateCommunityFlow } from './CreateCommunityFlow';
 import { CommunitySettingsButton } from './CommunitySettingsButton';
 import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
+import { AppSidebar } from './AppSidebar';
+import { AppDialogFrame } from './AppDialogFrame';
+import {
+  BellIcon,
+  ChatIcon,
+  HomeIcon,
+  MailIcon,
+  MenuIcon,
+  PlusIcon,
+  PrayerIcon,
+  SearchIcon,
+  VideoIcon,
+} from './AppIcons';
+import { isAppChatSplitLayout, isAppDesktopLayout } from './appLayout';
 import { getAppCommunityChatPath, getAppCommunityPath } from '../pathUtils';
 import {
   APP_COMMUNITY_CHAT_PATH,
@@ -52,6 +67,10 @@ export function AppShell() {
     end: true,
   });
   const chatMode = !!chatListMatch || !!chatRoomMatch;
+  const screenSize = useScreenSizeContext();
+  const desktop = isAppDesktopLayout(screenSize);
+  // Rooms, and the chat list/room split, manage their own scrolling.
+  const chatFillsMain = !!chatRoomMatch || (chatMode && isAppChatSplitLayout(screenSize));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
@@ -108,64 +127,17 @@ export function AppShell() {
         disabled={!communityIdOrAlias}
         onClick={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 11 12 4l8 7" />
-          <path d="M6 10v9h12v-9" />
-        </svg>
+        <HomeIcon />
         {!chatMode && <span className={css.NavButtonLabel}>Home</span>}
       </button>
       <button type="button" aria-label="Search" className={css.NavButton}>
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.2-3.2" />
-        </svg>
+        <SearchIcon />
       </button>
       <button type="button" aria-label="Prayer" className={css.NavButton}>
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 21c-1.5 0-2.6-.5-3.4-1.2L4.8 16.4c-.7-.6-.8-1.6-.2-2.2.6-.6 1.5-.7 2.2-.1l1.5 1.3V6.8c0-1 .8-1.7 1.7-1.6.7.1 1.1.8 1.1 1.5V12" />
-          <path d="M12 21c1.5 0 2.6-.5 3.4-1.2l3.8-3.4c.7-.6.8-1.6.2-2.2-.6-.6-1.5-.7-2.2-.1l-1.5 1.3V6.8c0-1-.8-1.7-1.7-1.6-.7.1-1.1.8-1.1 1.5V12" />
-        </svg>
+        <PrayerIcon />
       </button>
       <button type="button" aria-label="Video stories" className={css.NavButton}>
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="5" width="18" height="14" rx="3" />
-          <path d="M10 9l5 3-5 3z" />
-        </svg>
+        <VideoIcon />
       </button>
       <button
         type="button"
@@ -175,22 +147,178 @@ export function AppShell() {
         disabled={!communityIdOrAlias}
         onClick={() => communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))}
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 11.5a8.5 8.5 0 0 1-11.9 7.8L3 21l1.7-6.1A8.5 8.5 0 1 1 21 11.5Z" />
-        </svg>
+        <ChatIcon />
         {chatMode && <span className={css.NavButtonLabel}>Chat</span>}
       </button>
     </nav>
   );
+
+  const accountButton = (
+    <div className={css.AvatarWrapper}>
+      <button
+        type="button"
+        aria-label="Account menu"
+        aria-haspopup="menu"
+        aria-expanded={accountMenuOpen}
+        className={css.UserAvatarButton}
+        onClick={() => setAccountMenuOpen((open) => !open)}
+      >
+        {userAvatarUrl ? (
+          <img src={userAvatarUrl} alt="" width={36} height={36} />
+        ) : (
+          nameInitials(profile.displayName ?? userId, 2)
+        )}
+      </button>
+      <AccountMenu
+        open={accountMenuOpen}
+        displayName={profile.displayName}
+        userId={userId}
+        onInvite={registrationBot ? () => setInviteOpen(true) : undefined}
+        onClose={() => setAccountMenuOpen(false)}
+      />
+    </div>
+  );
+
+  const headerActions = (
+    <>
+      <div className={css.HeaderSpacer} />
+      {joinedCommunity && <CommunitySettingsButton community={joinedCommunity} />}
+      <button type="button" aria-label="Notifications" className={css.IconButton}>
+        <BellIcon />
+      </button>
+      <button type="button" aria-label="Messages" className={css.IconButton}>
+        <MailIcon />
+      </button>
+      {accountButton}
+    </>
+  );
+
+  const tabs = (
+    <nav className={css.Tabs}>
+      {TABS.map((tab) => {
+        const active = tab.postType === postTypeFilter;
+        return (
+          <button
+            key={tab.label}
+            type="button"
+            aria-pressed={active}
+            className={`${css.Tab} ${active ? css.TabActive : ''}`}
+            onClick={() => setPostTypeFilter(tab.postType)}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+
+  const flows = (
+    <>
+      {createCommunityOpen && (
+        <AppDialogFrame desktop={desktop}>
+          <CreateCommunityFlow
+            open
+            onClose={() => setCreateCommunityOpen(false)}
+            onCreate={handleCommunityCreated}
+          />
+        </AppDialogFrame>
+      )}
+
+      {registrationBot && inviteOpen && (
+        <AppDialogFrame desktop={desktop}>
+          <InviteFlow open botConfig={registrationBot} onClose={() => setInviteOpen(false)} />
+        </AppDialogFrame>
+      )}
+
+      {shareFlowOpen && (
+        <AppDialogFrame desktop={desktop}>
+          <SharePostFlow
+            open
+            onClose={() => setShareFlowOpen(false)}
+            onComplete={handleShareComplete}
+          />
+        </AppDialogFrame>
+      )}
+
+      {composerState && (
+        <AppDialogFrame desktop={desktop}>
+          <SharePostComposer
+            open
+            defaultSpaceId={community?.roomId}
+            sharing={composerState.sharing}
+            sharingMedia={composerState.sharingMedia}
+            postType={composerState.postType}
+            onClose={() => setComposerState(undefined)}
+          />
+        </AppDialogFrame>
+      )}
+    </>
+  );
+
+  let activeSection: 'home' | 'chat' | undefined = 'home';
+  if (chatMode) activeSection = 'chat';
+  else if (settingsMatch) activeSection = undefined;
+
+  if (desktop) {
+    return (
+      <div className={`${css.Shell} ${css.DesktopShell}`}>
+        <AppSidebar
+          communities={joinedCommunities}
+          currentCommunityId={communityIdOrAlias}
+          activeSection={activeSection}
+          canShare={joinedCommunities.length > 0}
+          onShare={() => setShareFlowOpen(true)}
+          onOpenHome={() => communityIdOrAlias && navigate(getAppCommunityPath(communityIdOrAlias))}
+          onOpenChat={() =>
+            communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))
+          }
+          onSelectCommunity={(communityId) =>
+            navigate(
+              chatMode ? getAppCommunityChatPath(communityId) : getAppCommunityPath(communityId)
+            )
+          }
+          onCreateCommunity={() => setCreateCommunityOpen(true)}
+        />
+
+        <div className={css.DesktopMain}>
+          {settingsMatch ? (
+            // The settings page brings its own header with a back link.
+            <div className={css.DesktopPageArea}>
+              <Outlet context={outletContext} />
+            </div>
+          ) : (
+            <>
+              <header className={`${css.Header} ${css.DesktopHeader}`}>
+                <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
+                {community && <span className={css.DesktopHeaderCommunity}>{community.name}</span>}
+                {headerActions}
+              </header>
+
+              {chatFillsMain && (
+                <div className={css.DesktopChatArea}>
+                  <Outlet context={outletContext} />
+                </div>
+              )}
+              {!chatFillsMain && !chatMode && (
+                <div className={css.DesktopTabsBar}>
+                  <div className={css.DesktopColumn}>{tabs}</div>
+                </div>
+              )}
+              {!chatFillsMain && (
+                <div className={`${css.ScrollArea} ${css.DesktopScrollArea}`}>
+                  <div className={css.DesktopColumn}>
+                    <Outlet context={outletContext} />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {flows}
+      </div>
+    );
+  }
 
   if (chatRoomMatch || settingsMatch) {
     // A room's own header, timeline and composer take the full screen, as
@@ -213,94 +341,13 @@ export function AppShell() {
           className={css.IconButton}
           onClick={() => setDrawerOpen(true)}
         >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
+          <MenuIcon />
         </button>
         <span className={css.HeaderTitle}>{chatMode ? 'Chat' : 'Posts'}</span>
-        <div className={css.HeaderSpacer} />
-        {joinedCommunity && <CommunitySettingsButton community={joinedCommunity} />}
-        <button type="button" aria-label="Notifications" className={css.IconButton}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-          </svg>
-        </button>
-        <button type="button" aria-label="Messages" className={css.IconButton}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="5" width="18" height="14" rx="2.5" />
-            <path d="m3.5 7 8.5 6 8.5-6" />
-          </svg>
-        </button>
-        <div className={css.AvatarWrapper}>
-          <button
-            type="button"
-            aria-label="Account menu"
-            aria-haspopup="menu"
-            aria-expanded={accountMenuOpen}
-            className={css.UserAvatarButton}
-            onClick={() => setAccountMenuOpen((open) => !open)}
-          >
-            {userAvatarUrl ? (
-              <img src={userAvatarUrl} alt="" width={36} height={36} />
-            ) : (
-              nameInitials(profile.displayName ?? userId, 2)
-            )}
-          </button>
-          <AccountMenu
-            open={accountMenuOpen}
-            displayName={profile.displayName}
-            userId={userId}
-            onInvite={registrationBot ? () => setInviteOpen(true) : undefined}
-            onClose={() => setAccountMenuOpen(false)}
-          />
-        </div>
+        {headerActions}
       </header>
 
-      {!chatMode && (
-        <nav className={css.Tabs}>
-          {TABS.map((tab) => {
-            const active = tab.postType === postTypeFilter;
-            return (
-              <button
-                key={tab.label}
-                type="button"
-                aria-pressed={active}
-                className={`${css.Tab} ${active ? css.TabActive : ''}`}
-                onClick={() => setPostTypeFilter(tab.postType)}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-      )}
+      {!chatMode && tabs}
 
       <div className={css.ScrollArea}>
         <Outlet context={outletContext} />
@@ -313,17 +360,7 @@ export function AppShell() {
           disabled={joinedCommunities.length === 0}
           onClick={() => setShareFlowOpen(true)}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.3"
-            strokeLinecap="round"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <PlusIcon />
           Share
         </button>
       )}
@@ -342,34 +379,7 @@ export function AppShell() {
         onClose={() => setDrawerOpen(false)}
       />
 
-      <CreateCommunityFlow
-        open={createCommunityOpen}
-        onClose={() => setCreateCommunityOpen(false)}
-        onCreate={handleCommunityCreated}
-      />
-
-      {registrationBot && (
-        <InviteFlow
-          open={inviteOpen}
-          botConfig={registrationBot}
-          onClose={() => setInviteOpen(false)}
-        />
-      )}
-
-      <SharePostFlow
-        open={shareFlowOpen}
-        onClose={() => setShareFlowOpen(false)}
-        onComplete={handleShareComplete}
-      />
-
-      <SharePostComposer
-        open={!!composerState}
-        defaultSpaceId={community?.roomId}
-        sharing={composerState?.sharing}
-        sharingMedia={composerState?.sharingMedia}
-        postType={composerState?.postType}
-        onClose={() => setComposerState(undefined)}
-      />
+      {flows}
     </div>
   );
 }

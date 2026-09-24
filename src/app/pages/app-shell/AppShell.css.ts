@@ -1,10 +1,14 @@
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const Shell = style({
   fontFamily: "'Plus Jakarta Sans Variable', system-ui, sans-serif",
   color: '#1e2a32',
   background: '#dce7ec',
   minHeight: '100dvh',
+  // The shell sits in ClientLayout's row flexbox; without growing it would
+  // shrink to its content's width instead of filling the screen.
+  flexGrow: 1,
+  minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -169,6 +173,80 @@ export const RoomArea = style({
   flexGrow: 1,
   minHeight: 0,
   height: '100dvh',
+  display: 'flex',
+  flexDirection: 'column',
+});
+
+/* Desktop layout: persistent sidebar next to a main column. */
+
+export const DesktopShell = style({
+  flexDirection: 'row',
+  height: '100dvh',
+});
+
+export const DesktopMain = style({
+  flexGrow: 1,
+  minWidth: 0,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  position: 'relative',
+});
+
+export const DesktopHeader = style({
+  padding: '18px 28px 12px',
+  gap: '16px',
+});
+
+export const DesktopHeaderCommunity = style({
+  fontSize: '15px',
+  fontWeight: 600,
+  color: '#7c8d97',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  minWidth: 0,
+});
+
+export const DesktopTabsBar = style({
+  flexShrink: 0,
+  borderBottom: '1px solid #cdd9df',
+  padding: '0 28px',
+});
+
+// The column's own tab strip keeps its spacing but not a second border.
+globalStyle(`${DesktopTabsBar} ${Tabs}`, {
+  borderBottom: 'none',
+  padding: '4px 4px 0',
+});
+
+export const DesktopColumn = style({
+  width: '100%',
+  maxWidth: '680px',
+  margin: '0 auto',
+  display: 'flex',
+  flexDirection: 'column',
+  flexGrow: 1,
+  flexShrink: 0,
+});
+
+export const DesktopScrollArea = style({
+  padding: '20px 28px 40px',
+  display: 'flex',
+  flexDirection: 'column',
+});
+
+export const DesktopChatArea = style({
+  flexGrow: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  borderTop: '1px solid #cdd9df',
+});
+
+export const DesktopPageArea = style({
+  flexGrow: 1,
+  minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
 });

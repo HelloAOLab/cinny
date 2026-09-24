@@ -2,12 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import FocusTrap from 'focus-trap-react';
 import { Room } from 'matrix-js-sdk';
-import { useMatrixClient } from '../../hooks/useMatrixClient';
-import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
-import { getRoomAvatarUrl } from '../../utils/room';
-import { nameInitials } from '../../utils/common';
 import { stopPropagation } from '../../utils/keyboard';
 import { getAppCommunityPath } from '../pathUtils';
+import { CommunityList, CreateCommunityButton } from './CommunityList';
 import * as css from './CommunitiesDrawer.css';
 
 type CommunitiesDrawerProps = {
@@ -28,8 +25,6 @@ export function CommunitiesDrawer({
   onCreateCommunity,
   onClose,
 }: CommunitiesDrawerProps) {
-  const mx = useMatrixClient();
-  const useAuthentication = useMediaAuthentication();
   const navigate = useNavigate();
 
   if (!open) return null;
@@ -74,48 +69,14 @@ export function CommunitiesDrawer({
             </button>
           </div>
           <div className={css.List}>
-            {communities.length === 0 && (
-              <span className={css.EmptyList}>You haven&apos;t joined any communities yet.</span>
-            )}
-            {communities.map((room) => {
-              const avatarUrl = getRoomAvatarUrl(mx, room, 96, useAuthentication);
-              return (
-                <button
-                  key={room.roomId}
-                  type="button"
-                  className={css.CommunityRow}
-                  aria-current={room.roomId === currentCommunityId}
-                  onClick={() => handleSelect(room.roomId)}
-                >
-                  <span className={css.CommunityAvatar}>
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" width={40} height={40} />
-                    ) : (
-                      nameInitials(room.name, 2)
-                    )}
-                  </span>
-                  <span className={css.CommunityName}>{room.name}</span>
-                </button>
-              );
-            })}
+            <CommunityList
+              communities={communities}
+              currentCommunityId={currentCommunityId}
+              onSelect={handleSelect}
+            />
           </div>
           <div className={css.Footer}>
-            <button type="button" className={css.CreateButton} onClick={onCreateCommunity}>
-              <span className={css.CreateIcon}>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.3"
-                  strokeLinecap="round"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </span>
-              <span className={css.CommunityName}>Create community</span>
-            </button>
+            <CreateCommunityButton onClick={onCreateCommunity} />
           </div>
         </div>
       </FocusTrap>

@@ -1,4 +1,5 @@
 import { style } from '@vanilla-extract/css';
+import { APP_DESKTOP_MEDIA } from '../../pages/app-shell/appLayout';
 
 export const Screen = style({
   flexGrow: 1,
@@ -36,6 +37,13 @@ export const Body = style({
   display: 'flex',
   flexDirection: 'column',
   gap: '24px',
+  '@media': {
+    [APP_DESKTOP_MEDIA]: {
+      // Center the sections in the same 680px column as the feed, keeping
+      // the scrollbar at the window edge.
+      padding: '20px max(28px, calc((100% - 680px) / 2)) 40px',
+    },
+  },
 });
 
 export const Section = style({
