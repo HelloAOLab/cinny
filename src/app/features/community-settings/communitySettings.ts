@@ -1,4 +1,10 @@
-import { JoinRule, MatrixClient, RestrictedAllowType, Room } from 'matrix-js-sdk';
+import {
+  HistoryVisibility,
+  JoinRule,
+  MatrixClient,
+  RestrictedAllowType,
+  Room,
+} from 'matrix-js-sdk';
 import { RoomJoinRulesEventContent } from 'matrix-js-sdk/lib/types';
 import { Membership, StateEvent } from '../../../types/matrix/room';
 import {
@@ -217,4 +223,93 @@ export const getInviteBlockReason = (membership: string | undefined): string | u
     default:
       return undefined;
   }
+};
+
+export type ChildRoomInviteCheck = {
+  encrypted: boolean;
+  historyVisibility: string | undefined;
+  inviterMembership: string | undefined;
+  inviteeMembership: string | undefined;
+  canInvite: boolean;
+};
+
+/**
+ * Whether inviting someone to a community should also invite them to one of
+ * its rooms. People joining a community reach its rooms through the space
+ * (restricted join), which never gives them the keys for encrypted messages
+ * sent before they joined: matrix-js-sdk only shares room history when
+ * inviting someone. So we invite them to the encrypted rooms whose history
+ * visibility lets new members read past messages, when we can.
+ */
+export const shouldInviteToChildRoom = ({
+  encrypted,
+  historyVisibility,
+  inviterMembership,
+  inviteeMembership,
+  canInvite,
+}: ChildRoomInviteCheck): boolean => {
+  if (!encrypted || !canInvite) return false;
+  if (inviterMembership !== Membership.Join) return false;
+  // Unset history visibility defaults to shared.
+  const visibility = historyVisibility ?? HistoryVisibility.Shared;
+  if (visibility !== HistoryVisibility.Shared && visibility !== HistoryVisibility.WorldReadable) {
+    return false;
+  }
+  return (
+    inviteeMembership === undefined ||
+    inviteeMembership === Membership.Leave ||
+    inviteeMembership === Membership.Knock
+  );
+};
+
+export type InviteToCommunityResult = {
+  /** Rooms in the community the user could not be invited to. */
+  failedRoomIds: string[];
+};
+
+/**
+ * Invites a user to a community, then to its encrypted rooms (see
+ * shouldInviteToChildRoom) so they get the room history's keys. The space
+ * invite must succeed; room failures are collected so one room doesn't hide
+ * that the community invite went through.
+ */
+export const inviteToCommunity = async (
+  mx: MatrixClient,
+  space: Room,
+  userId: string
+): Promise<InviteToCommunityResult> => {
+  await mx.invite(space.roomId, userId);
+
+  const myUserId = mx.getSafeUserId();
+  const childRooms = getSpaceChildren(space)
+    .map((roomId) => mx.getRoom(roomId))
+    .filter((room): room is Room => !!room && !room.isSpaceRoom())
+    .filter((room) => {
+      const powerLevels = getPowersLevelFromMatrixEvent(
+        getStateEvent(room, StateEvent.RoomPowerLevels)
+      );
+      const permissions = getRoomPermissionsAPI(
+        getRoomCreatorsForRoomId(mx, room.roomId),
+        powerLevels
+      );
+      return shouldInviteToChildRoom({
+        encrypted: room.hasEncryptionStateEvent(),
+        historyVisibility: room.getHistoryVisibility(),
+        inviterMembership: room.getMyMembership(),
+        inviteeMembership: room.getMember(userId)?.membership,
+        canInvite: permissions.action('invite', myUserId),
+      });
+    });
+
+  const results = await Promise.all(
+    childRooms.map(async (room): Promise<string | undefined> => {
+      try {
+        await mx.invite(room.roomId, userId);
+        return undefined;
+      } catch {
+        return room.roomId;
+      }
+    })
+  );
+  return { failedRoomIds: results.filter((roomId): roomId is string => !!roomId) };
 };

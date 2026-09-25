@@ -30,6 +30,8 @@ import {
   getCommunityRole,
   getCommunityVisibility,
   getInviteBlockReason,
+  inviteToCommunity,
+  InviteToCommunityResult,
   parseInviteUserId,
   setCommunityVisibility,
   SetCommunityVisibilityResult,
@@ -359,13 +361,8 @@ function InviteSection({ community, canInvite }: { community: Room; canInvite: b
   const [invited, setInvited] = useState<string>();
   const defaultServer = getMxIdServer(mx.getSafeUserId());
 
-  const [inviteState, invite] = useAsyncCallback<void, MatrixError, [string]>(
-    useCallback(
-      async (userId) => {
-        await mx.invite(community.roomId, userId);
-      },
-      [mx, community.roomId]
-    )
+  const [inviteState, invite] = useAsyncCallback<InviteToCommunityResult, MatrixError, [string]>(
+    useCallback((userId) => inviteToCommunity(mx, community, userId), [mx, community])
   );
   const inviting = inviteState.status === AsyncStatus.Loading;
 
@@ -432,6 +429,15 @@ function InviteSection({ community, canInvite }: { community: Room; canInvite: b
         {invited && inviteState.status === AsyncStatus.Success && (
           <span className={css.Success}>Invited {invited}.</span>
         )}
+        {invited &&
+          inviteState.status === AsyncStatus.Success &&
+          inviteState.data.failedRoomIds.length > 0 && (
+            <span className={css.Hint}>
+              Couldn&apos;t invite them to{' '}
+              {pluralize(inviteState.data.failedRoomIds.length, 'room', 'rooms')}, so they may not
+              see older messages there.
+            </span>
+          )}
       </form>
     </section>
   );

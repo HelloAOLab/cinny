@@ -9,6 +9,7 @@ import {
   getSpaceVisibilityChanges,
   isCommunityAdmin,
   parseInviteUserId,
+  shouldInviteToChildRoom,
   shouldUpdateChildJoinRule,
 } from './communitySettings';
 
@@ -162,5 +163,46 @@ describe('getInviteBlockReason', () => {
   it('allows everyone else', () => {
     expect(getInviteBlockReason(undefined)).toBeUndefined();
     expect(getInviteBlockReason('leave')).toBeUndefined();
+  });
+});
+
+describe('shouldInviteToChildRoom', () => {
+  const base = {
+    encrypted: true,
+    historyVisibility: 'shared',
+    inviterMembership: 'join',
+    inviteeMembership: undefined,
+    canInvite: true,
+  };
+
+  it('invites to encrypted rooms with shared history the inviter is in', () => {
+    expect(shouldInviteToChildRoom(base)).toBe(true);
+    expect(shouldInviteToChildRoom({ ...base, historyVisibility: 'world_readable' })).toBe(true);
+  });
+
+  it('treats unset history visibility as shared', () => {
+    expect(shouldInviteToChildRoom({ ...base, historyVisibility: undefined })).toBe(true);
+  });
+
+  it('skips rooms whose history new members cannot read', () => {
+    expect(shouldInviteToChildRoom({ ...base, historyVisibility: 'joined' })).toBe(false);
+    expect(shouldInviteToChildRoom({ ...base, historyVisibility: 'invited' })).toBe(false);
+  });
+
+  it('skips unencrypted rooms, where there are no keys to share', () => {
+    expect(shouldInviteToChildRoom({ ...base, encrypted: false })).toBe(false);
+  });
+
+  it('skips rooms the inviter is not in or cannot invite to', () => {
+    expect(shouldInviteToChildRoom({ ...base, inviterMembership: 'leave' })).toBe(false);
+    expect(shouldInviteToChildRoom({ ...base, canInvite: false })).toBe(false);
+  });
+
+  it('only invites people who are not already in, invited to or banned from the room', () => {
+    expect(shouldInviteToChildRoom({ ...base, inviteeMembership: 'leave' })).toBe(true);
+    expect(shouldInviteToChildRoom({ ...base, inviteeMembership: 'knock' })).toBe(true);
+    expect(shouldInviteToChildRoom({ ...base, inviteeMembership: 'join' })).toBe(false);
+    expect(shouldInviteToChildRoom({ ...base, inviteeMembership: 'invite' })).toBe(false);
+    expect(shouldInviteToChildRoom({ ...base, inviteeMembership: 'ban' })).toBe(false);
   });
 });

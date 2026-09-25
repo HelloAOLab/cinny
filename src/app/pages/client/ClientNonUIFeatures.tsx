@@ -26,6 +26,7 @@ import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { useSelectedRoom } from '../../hooks/router/useSelectedRoom';
 import { useInboxNotificationsSelected } from '../../hooks/router/useInbox';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { bootstrapNewAccountCrossSigning } from '../../utils/newAccountCrossSigning';
 
 function SystemEmojiFeature() {
   const [twitterEmoji] = useSetting(settingsAtom, 'twitterEmoji');
@@ -253,6 +254,19 @@ function MessageNotifications() {
   );
 }
 
+function NewAccountCrossSigning() {
+  const mx = useMatrixClient();
+
+  useEffect(() => {
+    bootstrapNewAccountCrossSigning(mx).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to set up cross-signing for the new account', e);
+    });
+  }, [mx]);
+
+  return null;
+}
+
 type ClientNonUIFeaturesProps = {
   children: ReactNode;
 };
@@ -265,6 +279,7 @@ export function ClientNonUIFeatures({ children }: ClientNonUIFeaturesProps) {
       <FaviconUpdater />
       <InviteNotifications />
       <MessageNotifications />
+      <NewAccountCrossSigning />
       {children}
     </>
   );
