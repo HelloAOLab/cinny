@@ -4,12 +4,14 @@ import FocusTrap from 'focus-trap-react';
 import { Room } from 'matrix-js-sdk';
 import { stopPropagation } from '../../utils/keyboard';
 import { getAppCommunityPath } from '../pathUtils';
-import { CommunityList, CreateCommunityButton } from './CommunityList';
+import { CommunitySections, CreateCommunityButton } from './CommunityList';
 import * as css from './CommunitiesDrawer.css';
 
 type CommunitiesDrawerProps = {
   open: boolean;
   communities: Room[];
+  /** Communities the user has been invited to but not yet joined. */
+  communityInvites: Room[];
   currentCommunityId?: string;
   /** Path to navigate to when a community is picked; defaults to its feed. */
   getCommunityPath?: (communityId: string) => string;
@@ -20,6 +22,7 @@ type CommunitiesDrawerProps = {
 export function CommunitiesDrawer({
   open,
   communities,
+  communityInvites,
   currentCommunityId,
   getCommunityPath = getAppCommunityPath,
   onCreateCommunity,
@@ -69,7 +72,9 @@ export function CommunitiesDrawer({
             </button>
           </div>
           <div className={css.List}>
-            <CommunityList
+            <CommunitySections
+              invites={communityInvites}
+              onJoined={handleSelect}
               communities={communities}
               currentCommunityId={currentCommunityId}
               onSelect={handleSelect}

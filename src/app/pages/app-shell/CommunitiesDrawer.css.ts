@@ -106,6 +106,90 @@ export const EmptyList = style({
   color: '#7c8d97',
 });
 
+export const ListHeading = style({
+  padding: '12px 8px 4px',
+  fontSize: '12px',
+  fontWeight: 800,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  color: '#7c8d97',
+});
+
+export const InviteRow = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  padding: '10px 8px',
+  borderRadius: '12px',
+  background: '#f4f8fa',
+  marginBottom: '6px',
+});
+
+export const InviteInfo = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  minWidth: 0,
+});
+
+export const InviteText = style({
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+});
+
+export const InviteSender = style({
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#7c8d97',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const InviteError = style({
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#c62828',
+});
+
+export const InviteActions = style({
+  display: 'flex',
+  gap: '8px',
+  justifyContent: 'flex-end',
+});
+
+const InviteButton = style({
+  border: 'none',
+  borderRadius: '999px',
+  padding: '7px 16px',
+  fontSize: '14px',
+  fontWeight: 700,
+  cursor: 'pointer',
+  selectors: {
+    '&:disabled': {
+      opacity: 0.6,
+      cursor: 'default',
+    },
+  },
+});
+
+export const JoinButton = style([
+  InviteButton,
+  {
+    background: '#1596ce',
+    color: '#fff',
+  },
+]);
+
+export const DeclineButton = style([
+  InviteButton,
+  {
+    background: '#e2e9ee',
+    color: '#2b3a43',
+  },
+]);
+
 export const Footer = style({
   flexShrink: 0,
   padding: '8px 10px 18px',
