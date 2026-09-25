@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAppCommunityChatPath,
   getAppCommunityChatRoomPath,
+  getAppCommunityPostPath,
   getAppInboxPath,
   getLoginPathForRedirect,
   getSpaceFeedPath,
@@ -27,6 +28,20 @@ describe('getAppCommunityChatRoomPath', () => {
   it('builds a chat room path scoped to a community', () => {
     expect(getAppCommunityChatRoomPath('!space:example.org', '#general:example.org')).toBe(
       '/app/!space%3Aexample.org/chat/%23general%3Aexample.org'
+    );
+  });
+
+  it('includes the event to jump to', () => {
+    expect(
+      getAppCommunityChatRoomPath('!space:example.org', '#general:example.org', '$event:x')
+    ).toBe('/app/!space%3Aexample.org/chat/%23general%3Aexample.org/%24event%3Ax');
+  });
+});
+
+describe('getAppCommunityPostPath', () => {
+  it('builds a post path scoped to a community', () => {
+    expect(getAppCommunityPostPath('!space:example.org', '$post:x')).toBe(
+      '/app/!space%3Aexample.org/post/%24post%3Ax'
     );
   });
 });

@@ -33,6 +33,7 @@ import {
   APP_PATH,
   _APP_CHAT_PATH,
   _APP_CHAT_ROOM_PATH,
+  _APP_POST_PATH,
   _APP_SETTINGS_PATH,
   _APP_INBOX_PATH,
   APP_LOGIN_PATH,
@@ -272,6 +273,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
             <Route index element={<AppFeedScreen />} />
             <Route path={_APP_CHAT_PATH} element={<AppChatListScreen />} />
             <Route path={_APP_CHAT_ROOM_PATH} element={<AppChatRoomScreen />} />
+            <Route path={_APP_POST_PATH} element={<AppFeedScreen />} />
             <Route path={_APP_SETTINGS_PATH} element={<AppCommunitySettingsScreen />} />
             <Route path={_APP_INBOX_PATH} element={<AppInboxScreen />} />
           </Route>

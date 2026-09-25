@@ -261,7 +261,7 @@ export function RenderMessageContent({
   }
 
   if (msgType === 'm.bad.encrypted') {
-    return <MBadEncrypted />;
+    return <MBadEncrypted content={getContent()} />;
   }
 
   return <UnsupportedContent />;

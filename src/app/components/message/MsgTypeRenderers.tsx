@@ -29,11 +29,15 @@ import { FALLBACK_MIMETYPE, getBlobSafeMimeType } from '../../utils/mimeTypes';
 import { parseGeoUri, scaleYDimension } from '../../utils/common';
 import { Attachment, AttachmentBox, AttachmentContent, AttachmentHeader } from './attachment';
 import { FileHeader, FileDownloadButton } from './FileHeader';
+import { getDecryptionFailureReason } from '../../utils/decryption';
 
-export function MBadEncrypted() {
+type MBadEncryptedProps = {
+  content: Record<string, unknown>;
+};
+export function MBadEncrypted({ content }: MBadEncryptedProps) {
   return (
     <Text>
-      <MessageBadEncryptedContent />
+      <MessageBadEncryptedContent reason={getDecryptionFailureReason(content.body)} />
     </Text>
   );
 }

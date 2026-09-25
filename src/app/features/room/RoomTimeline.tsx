@@ -24,6 +24,7 @@ import {
   RoomEventHandlerMap,
 } from 'matrix-js-sdk';
 import { HTMLReactParserOptions } from 'html-react-parser';
+import { useMatch, useNavigate } from 'react-router-dom';
 import classNames from 'classnames';
 import { ReactEditor } from 'slate-react';
 import { Editor } from 'slate';
@@ -115,6 +116,8 @@ import { roomToUnreadAtom } from '../../state/room/roomToUnread';
 import { useMentionClickHandler } from '../../hooks/useMentionClickHandler';
 import { useSpoilerClickHandler } from '../../hooks/useSpoilerClickHandler';
 import { useRoomNavigate } from '../../hooks/useRoomNavigate';
+import { APP_COMMUNITY_CHAT_ROOM_PATH } from '../../pages/paths';
+import { getAppCommunityChatRoomPath } from '../../pages/pathUtils';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useIgnoredUsers } from '../../hooks/useIgnoredUsers';
 import { useImagePackRooms } from '../../hooks/useImagePackRooms';
@@ -480,6 +483,8 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const roomToParents = useAtomValue(roomToParentsAtom);
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
   const { navigateRoom } = useRoomNavigate();
+  const navigate = useNavigate();
+  const appChatRoomMatch = useMatch(APP_COMMUNITY_CHAT_ROOM_PATH);
   const mentionClickHandler = useMentionClickHandler(room.roomId);
   const spoilerClickHandler = useSpoilerClickHandler();
   const openUserRoomProfile = useOpenUserRoomProfile();
@@ -885,7 +890,15 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
 
   const handleJumpToLatest = () => {
     if (eventId) {
-      navigateRoom(room.roomId, undefined, { replace: true });
+      const { communityIdOrAlias, roomIdOrAlias } = appChatRoomMatch?.params ?? {};
+      if (communityIdOrAlias && roomIdOrAlias) {
+        // Stay inside the /app shell's chat view.
+        navigate(getAppCommunityChatRoomPath(communityIdOrAlias, roomIdOrAlias), {
+          replace: true,
+        });
+      } else {
+        navigateRoom(room.roomId, undefined, { replace: true });
+      }
     }
     setTimeline(getInitialTimeline(room));
     scrollToBottomRef.current.count += 1;

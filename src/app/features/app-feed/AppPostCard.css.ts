@@ -8,6 +8,11 @@ export const Card = style({
   boxShadow: '0 1px 2px rgba(30, 42, 50, 0.05), 0 10px 24px rgba(30, 42, 50, 0.05)',
 });
 
+export const CardFocused = style({
+  boxShadow:
+    '0 0 0 2px #1596ce, 0 1px 2px rgba(30, 42, 50, 0.05), 0 10px 24px rgba(30, 42, 50, 0.05)',
+});
+
 export const CardHeader = style({
   display: 'flex',
   alignItems: 'center',
