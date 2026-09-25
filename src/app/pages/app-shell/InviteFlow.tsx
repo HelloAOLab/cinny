@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationBotConfig } from '../../plugins/registration-bot';
 import { useRegistrationLink } from '../../hooks/useRegistrationLink';
+import { useRegistrationInvites } from '../../hooks/useRegistrationInvites';
+import { describeInvite, summarizeInvites } from './inviteList';
 import { stopPropagation } from '../../utils/keyboard';
 import * as css from './InviteFlow.css';
 
@@ -35,6 +37,64 @@ const LINK_ICON = (
     <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
   </svg>
 );
+
+const formatTime = (ms: number): string =>
+  new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+const TONE_CLASS = {
+  positive: css.BadgePositive,
+  neutral: css.BadgeNeutral,
+  muted: css.BadgeMuted,
+};
+
+function InviteList({ botConfig, link }: { botConfig: RegistrationBotConfig; link?: string }) {
+  const { invites, loading, error, refresh } = useRegistrationInvites(botConfig);
+
+  // A newly generated link belongs in the list, so reload it once one arrives.
+  useEffect(() => {
+    if (link) refresh();
+  }, [link, refresh]);
+
+  return (
+    <section className={css.Field} aria-labelledby="invite-list-title">
+      <div className={css.ListHeader}>
+        <span className={css.Label} id="invite-list-title">
+          Your Invites
+        </span>
+        {invites && invites.length > 0 && (
+          <span className={css.ListSummary}>{summarizeInvites(invites)}</span>
+        )}
+      </div>
+      {error && <span className={css.Error}>{error}</span>}
+      {!invites && loading && <span className={css.ListEmpty}>Loading invites…</span>}
+      {invites && invites.length === 0 && (
+        <span className={css.ListEmpty}>You haven&apos;t generated any invite links yet.</span>
+      )}
+      {invites && invites.length > 0 && (
+        <ul className={css.InviteList}>
+          {invites.map((invite) => {
+            const { label, tone, detail } = describeInvite(invite, formatTime);
+            return (
+              <li key={invite.tokenSha256} className={css.InviteCard}>
+                <div className={css.InviteRow}>
+                  <span className={css.OptionTitle}>
+                    {invite.issuedAt === null ? 'Unknown date' : formatTime(invite.issuedAt)}
+                  </span>
+                  <span className={`${css.Badge} ${TONE_CLASS[tone]}`}>{label}</span>
+                </div>
+                {detail && <div className={css.InviteDetail}>{detail}</div>}
+                <div className={css.OptionSubtitle}>
+                  {invite.clientId && `${invite.clientId} · `}
+                  {`Link ${invite.tokenSha256.slice(0, 8)}…`}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 type InviteFlowProps = {
   open: boolean;
@@ -85,7 +145,7 @@ function InviteForm({ botConfig, onClose }: Omit<InviteFlowProps, 'open'>) {
         <div className={css.Body}>
           <p className={css.Description}>
             Get a single-use link you can send to someone to invite them to create an account on
-            this server.
+            this server, and see who has used the links you already sent.
           </p>
           {clients && clients.length > 1 && !link && (
             <div className={css.Field}>
@@ -129,6 +189,7 @@ function InviteForm({ botConfig, onClose }: Omit<InviteFlowProps, 'open'>) {
               </button>
             </div>
           )}
+          <InviteList botConfig={botConfig} link={link} />
           <div className={css.Actions}>
             {link ? (
               <button type="button" className={css.SubmitButton} onClick={onClose}>

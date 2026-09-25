@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MatrixClient } from 'matrix-js-sdk';
 import {
   buildRegistrationClientsUrl,
+  buildRegistrationInvitesUrl,
   buildRegistrationLinkRequestBody,
   buildRegistrationLinkUrl,
   isOpenIdTokenFresh,
   parseRegistrationClientsResponse,
+  parseRegistrationInvitesResponse,
   parseRegistrationLinkResponse,
   requestRegistrationClients,
+  requestRegistrationInvites,
   requestRegistrationLink,
 } from './registration-bot';
 
@@ -36,6 +39,100 @@ describe('buildRegistrationClientsUrl', () => {
     expect(buildRegistrationClientsUrl('https://bot.example.org/', 'a b&c')).toBe(
       'https://bot.example.org/api/clients?client_id=a%20b%26c'
     );
+  });
+});
+
+describe('buildRegistrationInvitesUrl', () => {
+  it('has no query for your own invites', () => {
+    expect(buildRegistrationInvitesUrl('https://bot.example.org/')).toBe(
+      'https://bot.example.org/api/invites'
+    );
+  });
+
+  it('encodes user_id into the query', () => {
+    expect(buildRegistrationInvitesUrl('https://bot.example.org', '@a:b.org')).toBe(
+      'https://bot.example.org/api/invites?user_id=%40a%3Ab.org'
+    );
+  });
+});
+
+describe('parseRegistrationInvitesResponse', () => {
+  const wireInvite = {
+    token_sha256: '9cb4aa',
+    status: 'used',
+    client_id: 'element',
+    issued_at: 1790181986000,
+    expires_at: null,
+    registered_user_id: '@carol:example.org',
+    registered_at: 1790182013010,
+  };
+
+  it('parses invites into camelCase', () => {
+    expect(parseRegistrationInvitesResponse({ success: true, invites: [wireInvite] })).toEqual({
+      success: true,
+      invites: [
+        {
+          tokenSha256: '9cb4aa',
+          status: 'used',
+          clientId: 'element',
+          issuedAt: 1790181986000,
+          expiresAt: null,
+          registeredUserId: '@carol:example.org',
+          registeredAt: 1790182013010,
+        },
+      ],
+    });
+  });
+
+  it('treats missing optional fields as null', () => {
+    expect(
+      parseRegistrationInvitesResponse({
+        success: true,
+        invites: [{ token_sha256: 'x', status: 'unused' }],
+      })
+    ).toEqual({
+      success: true,
+      invites: [
+        {
+          tokenSha256: 'x',
+          status: 'unused',
+          clientId: null,
+          issuedAt: null,
+          expiresAt: null,
+          registeredUserId: null,
+          registeredAt: null,
+        },
+      ],
+    });
+  });
+
+  it('drops malformed or unknown-status entries but keeps the rest', () => {
+    const result = parseRegistrationInvitesResponse({
+      success: true,
+      invites: [
+        wireInvite,
+        { ...wireInvite, token_sha256: 'y', status: 'someday' },
+        { ...wireInvite, token_sha256: 'z', issued_at: 'yesterday' },
+        'nope',
+      ],
+    });
+    expect(result.success && result.invites.map((i) => i.tokenSha256)).toEqual(['9cb4aa']);
+  });
+
+  it("passes on the bot's refusal", () => {
+    expect(
+      parseRegistrationInvitesResponse({
+        success: false,
+        error: { code: 'upstream_error', message: 'module missing' },
+      })
+    ).toEqual({ success: false, error: { code: 'upstream_error', message: 'module missing' } });
+  });
+
+  it('falls back to a generic message', () => {
+    expect(parseRegistrationInvitesResponse({ success: true })).toEqual({
+      success: false,
+      error: { code: undefined, message: 'The registration bot could not list invites.' },
+    });
   });
 });
 
@@ -257,6 +354,21 @@ describe('requesting over HTTP', () => {
     });
     expect(getOpenIdToken).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh');
+  });
+
+  it('lists invites with a GET to /api/invites', async () => {
+    const { mx } = fakeClient('openid-1');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { success: true, invites: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(requestRegistrationInvites(mx, botConfig)).resolves.toEqual({
+      success: true,
+      invites: [],
+    });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://bot.example.org/api/invites');
+    expect(init.method).toBe('GET');
+    expect(init.headers.Authorization).toBe('Bearer openid-1');
   });
 
   it("surfaces the bot's refusal", async () => {

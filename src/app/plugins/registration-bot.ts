@@ -1,11 +1,13 @@
 /**
  * Client for the registration bot's HTTP API, from
- * https://github.com/HelloAOLab/matrix-bots/pull/45:
+ * https://github.com/HelloAOLab/matrix-bots/pull/45 and
+ * https://github.com/HelloAOLab/matrix-bots/pull/48:
  *
  *   POST <apiUrl>/api/registration-link   { "client_id"?: string }
  *   GET  <apiUrl>/api/clients[?client_id=<id>]
+ *   GET  <apiUrl>/api/invites[?user_id=<user>]
  *
- * Both are authenticated with `Authorization: Bearer <access_token>`, where the token
+ * All are authenticated with `Authorization: Bearer <access_token>`, where the token
  * is an OpenID token we get from our own homeserver
  * (`POST /_matrix/client/v3/user/{userId}/openid/request_token`). Only its
  * `access_token` is sent — the bot verifies it against the one homeserver it lives on,
@@ -64,8 +66,46 @@ export type RegistrationClientsFailure = {
 
 export type RegistrationClientsResult = RegistrationClientsSuccess | RegistrationClientsFailure;
 
+export const REGISTRATION_INVITE_STATUSES = [
+  'unused',
+  'pending',
+  'used',
+  'expired',
+  'revoked',
+] as const;
+
+export type RegistrationInviteStatus = typeof REGISTRATION_INVITE_STATUSES[number];
+
+/**
+ * A registration link the bot generated for someone. The token itself is never
+ * returned — only the hex SHA-256 of it — since an unused one would still work.
+ * Timestamps are milliseconds since the epoch.
+ */
+export type RegistrationInvite = {
+  tokenSha256: string;
+  status: RegistrationInviteStatus;
+  clientId: string | null;
+  issuedAt: number | null;
+  expiresAt: number | null;
+  registeredUserId: string | null;
+  registeredAt: number | null;
+};
+
+export type RegistrationInvitesSuccess = {
+  success: true;
+  invites: RegistrationInvite[];
+};
+
+export type RegistrationInvitesFailure = {
+  success: false;
+  error: RegistrationError;
+};
+
+export type RegistrationInvitesResult = RegistrationInvitesSuccess | RegistrationInvitesFailure;
+
 const LINK_FALLBACK_MESSAGE = 'The registration bot could not create a link.';
 const CLIENTS_FALLBACK_MESSAGE = 'The registration bot could not list clients.';
+const INVITES_FALLBACK_MESSAGE = 'The registration bot could not list invites.';
 
 const joinUrl = (apiUrl: string, path: string): string => `${apiUrl.replace(/\/+$/, '')}${path}`;
 
@@ -75,6 +115,12 @@ export const buildRegistrationLinkUrl = (apiUrl: string): string =>
 export const buildRegistrationClientsUrl = (apiUrl: string, clientId?: string): string => {
   const url = joinUrl(apiUrl, '/api/clients');
   return clientId ? `${url}?client_id=${encodeURIComponent(clientId)}` : url;
+};
+
+/** `userId` asks for someone else's invites, which the bot only allows admins. */
+export const buildRegistrationInvitesUrl = (apiUrl: string, userId?: string): string => {
+  const url = joinUrl(apiUrl, '/api/invites');
+  return userId ? `${url}?user_id=${encodeURIComponent(userId)}` : url;
 };
 
 export const buildRegistrationLinkRequestBody = (params: {
@@ -136,14 +182,64 @@ export const parseRegistrationClientsResponse = (value: unknown): RegistrationCl
   return { success: false, error: parseError(body, CLIENTS_FALLBACK_MESSAGE) };
 };
 
+const isInviteStatus = (value: unknown): value is RegistrationInviteStatus =>
+  typeof value === 'string' && (REGISTRATION_INVITE_STATUSES as readonly string[]).includes(value);
+
+const optionalString = (value: unknown): string | null | undefined => {
+  if (value === null || value === undefined) return null;
+  return typeof value === 'string' ? value : undefined;
+};
+
+const optionalNumber = (value: unknown): number | null | undefined => {
+  if (value === null || value === undefined) return null;
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+};
+
+const asInvite = (entry: unknown): RegistrationInvite | undefined => {
+  const record = asRecord(entry);
+  if (!record) return undefined;
+  const { token_sha256: tokenSha256, status } = record;
+  if (typeof tokenSha256 !== 'string' || !isInviteStatus(status)) return undefined;
+  const clientId = optionalString(record.client_id);
+  const issuedAt = optionalNumber(record.issued_at);
+  const expiresAt = optionalNumber(record.expires_at);
+  const registeredUserId = optionalString(record.registered_user_id);
+  const registeredAt = optionalNumber(record.registered_at);
+  if (
+    clientId === undefined ||
+    issuedAt === undefined ||
+    expiresAt === undefined ||
+    registeredUserId === undefined ||
+    registeredAt === undefined
+  ) {
+    return undefined;
+  }
+  return { tokenSha256, status, clientId, issuedAt, expiresAt, registeredUserId, registeredAt };
+};
+
+/**
+ * Entries that don't parse (e.g. a status added to the bot after this client) are
+ * dropped rather than failing the whole list, so the rest can still be shown.
+ */
+export const parseRegistrationInvitesResponse = (value: unknown): RegistrationInvitesResult => {
+  const body = asRecord(value);
+  if (body?.success === true && Array.isArray(body.invites)) {
+    const invites = body.invites
+      .map(asInvite)
+      .filter((invite): invite is RegistrationInvite => invite !== undefined);
+    return { success: true, invites };
+  }
+  return { success: false, error: parseError(body, INVITES_FALLBACK_MESSAGE) };
+};
+
 type CachedOpenIdToken = { accessToken: string; expiresAt: number };
 
 export const isOpenIdTokenFresh = (cached: CachedOpenIdToken | undefined, now: number): boolean =>
   cached !== undefined && cached.expiresAt - OPENID_TOKEN_EXPIRY_MARGIN_MS > now;
 
 /**
- * OpenID tokens last about an hour, and one UI open asks the bot at least twice (list
- * clients, then mint), so reuse a token until shortly before it expires.
+ * OpenID tokens last about an hour, and one UI open asks the bot several times (list
+ * clients and invites, then mint), so reuse a token until shortly before it expires.
  */
 const openIdTokenCache = new WeakMap<MatrixClient, CachedOpenIdToken>();
 
@@ -251,4 +347,22 @@ export const requestRegistrationClients = (
     { method: 'GET' },
     timeoutMs,
     parseRegistrationClientsResponse
+  );
+
+/**
+ * Ask the registration bot for the links it generated for the current user (or, for
+ * an admin, for `userId`), newest first, with each one's status.
+ */
+export const requestRegistrationInvites = (
+  mx: MatrixClient,
+  botConfig: RegistrationBotConfig,
+  userId?: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS
+): Promise<RegistrationInvitesResult> =>
+  callRegistrationApi(
+    mx,
+    buildRegistrationInvitesUrl(botConfig.apiUrl, userId),
+    { method: 'GET' },
+    timeoutMs,
+    parseRegistrationInvitesResponse
   );

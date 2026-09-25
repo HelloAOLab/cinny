@@ -150,6 +150,9 @@ export const Error = style({
 
 export const Actions = style({
   marginTop: 'auto',
+  // Stays in view while a long invite list scrolls underneath.
+  position: 'sticky',
+  bottom: 0,
   display: 'flex',
   flexDirection: 'column',
   flexShrink: 0,
@@ -190,4 +193,82 @@ export const SubmitButton = style({
       boxShadow: 'none',
     },
   },
+});
+
+export const ListHeader = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '12px',
+});
+
+export const ListSummary = style({
+  fontSize: '13px',
+  fontWeight: 600,
+  color: '#7c8d97',
+});
+
+export const ListEmpty = style({
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#7c8d97',
+});
+
+export const InviteList = style({
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+});
+
+export const InviteCard = style({
+  background: '#fff',
+  borderRadius: '16px',
+  padding: '12px 16px',
+  boxShadow: '0 1px 2px rgba(30, 42, 50, 0.05), 0 10px 24px rgba(30, 42, 50, 0.05)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  minWidth: 0,
+});
+
+export const InviteRow = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '10px',
+  minWidth: 0,
+});
+
+export const InviteDetail = style({
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#2b3a43',
+  overflowWrap: 'anywhere',
+});
+
+export const Badge = style({
+  flexShrink: 0,
+  borderRadius: '999px',
+  padding: '3px 10px',
+  fontSize: '12px',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+});
+
+export const BadgePositive = style({
+  background: '#e3f4ea',
+  color: '#1e7a45',
+});
+
+export const BadgeNeutral = style({
+  background: '#e2f1f9',
+  color: '#1273a0',
+});
+
+export const BadgeMuted = style({
+  background: '#edf0f2',
+  color: '#6b7a83',
 });
