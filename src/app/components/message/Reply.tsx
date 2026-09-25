@@ -12,6 +12,7 @@ import { scaleSystemEmoji } from '../../plugins/react-custom-html-parser';
 import { useRoomEvent } from '../../hooks/useRoomEvent';
 import colorMXID from '../../../util/colorMXID';
 import { GetMemberPowerTag } from '../../hooks/useMemberPowerTag';
+import { getDecryptionFailureReason } from '../../utils/decryption';
 
 type ReplyLayoutProps = {
   userColor?: string;
@@ -120,7 +121,13 @@ export const Reply = as<'div', ReplyProps>(
         >
           {replyEvent !== undefined ? (
             <Text size="T300" truncate>
-              {badEncryption ? <MessageBadEncryptedContent /> : bodyJSX}
+              {badEncryption ? (
+                <MessageBadEncryptedContent
+                  reason={getDecryptionFailureReason(replyEvent?.getContent().body)}
+                />
+              ) : (
+                bodyJSX
+              )}
             </Text>
           ) : (
             <LinePlaceholder
