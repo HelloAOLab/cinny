@@ -1,4 +1,4 @@
-import { Box, Icon, Icons, Text, as, color, config } from 'folds';
+import { Box, Icon, Icons, Text, Tooltip, TooltipProvider, as, color, config, toRem } from 'folds';
 import React from 'react';
 
 const warningStyle = { color: color.Warning.Main, opacity: config.opacity.P300 };
@@ -31,12 +31,36 @@ export const MessageFailedContent = as<'div', { children?: never }>(({ ...props 
   </Box>
 ));
 
-export const MessageBadEncryptedContent = as<'div', { children?: never }>(({ ...props }, ref) => (
-  <Box as="span" alignItems="Center" gap="100" style={warningStyle} {...props} ref={ref}>
-    <Icon size="50" src={Icons.Lock} />
-    <i>Unable to decrypt message</i>
-  </Box>
-));
+export const MessageBadEncryptedContent = as<'div', { children?: never; reason?: string }>(
+  ({ reason, ...props }, ref) => {
+    const content = (
+      <Box as="span" alignItems="Center" gap="100" style={warningStyle} {...props} ref={ref}>
+        <Icon size="50" src={Icons.Lock} />
+        <i>Unable to decrypt message</i>
+      </Box>
+    );
+
+    if (!reason) return content;
+
+    return (
+      <TooltipProvider
+        position="Top"
+        align="Start"
+        tooltip={
+          <Tooltip style={{ maxWidth: toRem(300) }}>
+            <Text size="T300">{reason}</Text>
+          </Tooltip>
+        }
+      >
+        {(triggerRef) => (
+          <Box as="span" ref={triggerRef}>
+            {content}
+          </Box>
+        )}
+      </TooltipProvider>
+    );
+  }
+);
 
 export const MessageNotDecryptedContent = as<'div', { children?: never }>(({ ...props }, ref) => (
   <Box as="span" alignItems="Center" gap="100" style={warningStyle} {...props} ref={ref}>
