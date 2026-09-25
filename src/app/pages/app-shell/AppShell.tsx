@@ -7,6 +7,8 @@ import { useClientConfig } from '../../hooks/useClientConfig';
 import { useScreenSizeContext } from '../../hooks/useScreenSize';
 import { useSpaces } from '../../state/hooks/roomList';
 import { allRoomsAtom } from '../../state/room-list/roomList';
+import { useSpaceInvites } from '../../state/hooks/inviteList';
+import { allInvitesAtom } from '../../state/room-list/inviteList';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { nameInitials } from '../../utils/common';
 import { PostSharingLevel } from '../../features/create-post/postSharing';
@@ -102,6 +104,11 @@ export function AppShell() {
 
   const joinedCommunityIds = useSpaces(mx, allRoomsAtom);
   const joinedCommunities = joinedCommunityIds
+    .map((roomId) => mx.getRoom(roomId))
+    .filter((room): room is NonNullable<typeof room> => !!room);
+
+  const communityInviteIds = useSpaceInvites(mx, allInvitesAtom);
+  const communityInvites = communityInviteIds
     .map((roomId) => mx.getRoom(roomId))
     .filter((room): room is NonNullable<typeof room> => !!room);
 
@@ -310,6 +317,7 @@ export function AppShell() {
       <div className={`${css.Shell} ${css.DesktopShell}`}>
         <AppSidebar
           communities={joinedCommunities}
+          communityInvites={communityInvites}
           currentCommunityId={communityIdOrAlias}
           activeSection={activeSection}
           onOpenHome={openHome}
@@ -428,6 +436,7 @@ export function AppShell() {
       <CommunitiesDrawer
         open={drawerOpen}
         communities={joinedCommunities}
+        communityInvites={communityInvites}
         currentCommunityId={communityIdOrAlias}
         getCommunityPath={getSectionPath}
         onCreateCommunity={() => {

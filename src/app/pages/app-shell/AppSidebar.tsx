@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Room } from 'matrix-js-sdk';
 import { ChatIcon, HomeIcon, PrayerIcon, SearchIcon, VideoIcon } from './AppIcons';
-import { CommunityList, CreateCommunityButton } from './CommunityList';
+import { CommunitySections, CreateCommunityButton } from './CommunityList';
 import * as css from './AppSidebar.css';
 
 type SidebarNavItemProps = {
@@ -31,6 +31,8 @@ function SidebarNavItem({ label, icon, active, disabled, onClick }: SidebarNavIt
 
 type AppSidebarProps = {
   communities: Room[];
+  /** Communities the user has been invited to but not yet joined. */
+  communityInvites: Room[];
   currentCommunityId?: string;
   /** Section highlighted in the nav; none on pages like community settings. */
   activeSection?: 'home' | 'chat';
@@ -46,6 +48,7 @@ type AppSidebarProps = {
  */
 export function AppSidebar({
   communities,
+  communityInvites,
   currentCommunityId,
   activeSection,
   onOpenHome,
@@ -77,7 +80,9 @@ export function AppSidebar({
       </div>
       <span className={css.SectionTitle}>Communities</span>
       <div className={css.Communities}>
-        <CommunityList
+        <CommunitySections
+          invites={communityInvites}
+          onJoined={onSelectCommunity}
           communities={communities}
           currentCommunityId={currentCommunityId}
           onSelect={onSelectCommunity}
