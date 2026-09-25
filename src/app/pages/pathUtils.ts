@@ -20,6 +20,8 @@ import {
   APP_COMMUNITY_POST_PATH,
   APP_COMMUNITY_INBOX_PATH,
   APP_INBOX_PATH,
+  APP_COMMUNITY_SEARCH_PATH,
+  APP_SEARCH_PATH,
   APP_LOGIN_PATH,
   APP_REGISTER_PATH,
   LOGIN_PATH,
@@ -230,6 +232,17 @@ export const getAppInboxPath = (communityIdOrAlias?: string): string => {
     communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
   };
   return generatePath(APP_COMMUNITY_INBOX_PATH, params);
+};
+/**
+ * The search page inside the /app shell, scoped to a community when one is
+ * open so the shell keeps its Home/Chat navigation for it.
+ */
+export const getAppSearchPath = (communityIdOrAlias?: string): string => {
+  if (!communityIdOrAlias) return APP_SEARCH_PATH;
+  const params = {
+    communityIdOrAlias: encodeURIComponent(communityIdOrAlias),
+  };
+  return generatePath(APP_COMMUNITY_SEARCH_PATH, params);
 };
 export const getAppLoginPath = (server?: string): string => {
   const params = server ? { server: encodeURIComponent(server) } : undefined;

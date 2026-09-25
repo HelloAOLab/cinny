@@ -4,6 +4,7 @@ import {
   getAppCommunityChatRoomPath,
   getAppCommunityPostPath,
   getAppInboxPath,
+  getAppSearchPath,
   getLoginPathForRedirect,
   getSpaceFeedPath,
 } from './pathUtils';
@@ -53,6 +54,16 @@ describe('getAppInboxPath', () => {
 
   it('falls back to the unscoped inbox path without a community', () => {
     expect(getAppInboxPath()).toBe('/app/inbox/');
+  });
+});
+
+describe('getAppSearchPath', () => {
+  it('builds the search path scoped to a community', () => {
+    expect(getAppSearchPath('!space:example.org')).toBe('/app/!space%3Aexample.org/search');
+  });
+
+  it('falls back to the unscoped search path without a community', () => {
+    expect(getAppSearchPath()).toBe('/app/search/');
   });
 });
 

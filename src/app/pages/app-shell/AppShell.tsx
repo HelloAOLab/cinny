@@ -41,13 +41,16 @@ import {
   getAppCommunityPath,
   getAppInboxPath,
   getAppPath,
+  getAppSearchPath,
 } from '../pathUtils';
 import {
   APP_COMMUNITY_CHAT_PATH,
   APP_COMMUNITY_CHAT_ROOM_PATH,
   APP_COMMUNITY_INBOX_PATH,
   APP_COMMUNITY_SETTINGS_PATH,
+  APP_COMMUNITY_SEARCH_PATH,
   APP_INBOX_PATH,
+  APP_SEARCH_PATH,
 } from '../paths';
 import * as css from './AppShell.css';
 
@@ -81,9 +84,16 @@ export function AppShell() {
     caseSensitive: true,
     end: true,
   });
+  const searchMatch = useMatch({ path: APP_SEARCH_PATH, caseSensitive: true, end: true });
+  const communitySearchMatch = useMatch({
+    path: APP_COMMUNITY_SEARCH_PATH,
+    caseSensitive: true,
+    end: true,
+  });
   const chatMode = !!chatListMatch || !!chatRoomMatch;
   const inboxMode = !!inboxMatch || !!communityInboxMatch;
-  const homeMode = !chatMode && !inboxMode;
+  const searchMode = !!searchMatch || !!communitySearchMatch;
+  const homeMode = !chatMode && !inboxMode && !searchMode;
   const screenSize = useScreenSizeContext();
   const desktop = isAppDesktopLayout(screenSize);
   // Rooms, the chat list/room split and the inbox manage their own scrolling.
@@ -158,8 +168,15 @@ export function AppShell() {
         <HomeIcon />
         {homeMode && <span className={css.NavButtonLabel}>Home</span>}
       </button>
-      <button type="button" aria-label="Search" className={css.NavButton}>
+      <button
+        type="button"
+        aria-label="Search"
+        aria-current={searchMode ? 'page' : undefined}
+        className={`${css.NavButton} ${css.NavButtonLink} ${searchMode ? css.NavButtonActive : ''}`}
+        onClick={() => navigate(getAppSearchPath(communityIdOrAlias))}
+      >
         <SearchIcon />
+        {searchMode && <span className={css.NavButtonLabel}>Search</span>}
       </button>
       <button type="button" aria-label="Prayer" className={css.NavButton}>
         <PrayerIcon />
@@ -297,13 +314,15 @@ export function AppShell() {
     </>
   );
 
-  let activeSection: 'home' | 'chat' | undefined = 'home';
+  let activeSection: 'home' | 'chat' | 'search' | undefined = 'home';
   if (chatMode) activeSection = 'chat';
+  else if (searchMode) activeSection = 'search';
   else if (settingsMatch || inboxMode) activeSection = undefined;
 
   // Switching community keeps the user in the section they're in.
   const getSectionPath = (communityId: string): string => {
     if (inboxMode) return getAppInboxPath(communityId);
+    if (searchMode) return getAppSearchPath(communityId);
     if (chatMode) return getAppCommunityChatPath(communityId);
     return getAppCommunityPath(communityId);
   };
@@ -311,6 +330,7 @@ export function AppShell() {
   let headerTitle = 'Posts';
   if (chatMode) headerTitle = 'Chat';
   else if (inboxMode) headerTitle = 'Inbox';
+  else if (searchMode) headerTitle = 'Search';
 
   if (desktop) {
     return (
@@ -324,6 +344,7 @@ export function AppShell() {
           onOpenChat={() =>
             communityIdOrAlias && navigate(getAppCommunityChatPath(communityIdOrAlias))
           }
+          onOpenSearch={() => navigate(getAppSearchPath(communityIdOrAlias))}
           onSelectCommunity={(communityId) => navigate(getSectionPath(communityId))}
           onCreateCommunity={() => setCreateCommunityOpen(true)}
         />
@@ -362,7 +383,7 @@ export function AppShell() {
             </>
           )}
 
-          {!settingsMatch && !chatMode && (
+          {!settingsMatch && !chatMode && !searchMode && (
             <button
               type="button"
               className={`${css.ShareFab} ${css.DesktopShareFab}`}
