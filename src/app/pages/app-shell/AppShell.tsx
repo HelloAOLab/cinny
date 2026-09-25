@@ -21,7 +21,7 @@ import { InviteFlow } from './InviteFlow';
 import { AppOutletContext } from './AppOutletContext';
 import { AppSidebar } from './AppSidebar';
 import { AppDialogFrame } from './AppDialogFrame';
-import { Settings } from '../../features/settings';
+import { Settings, SettingsPages } from '../../features/settings';
 import { Modal500 } from '../../components/Modal500';
 import {
   ChatIcon,
@@ -91,7 +91,8 @@ export function AppShell() {
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
   const [createCommunityOpen, setCreateCommunityOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // `page` is undefined for the default landing page.
+  const [settingsOpen, setSettingsOpen] = useState<{ page?: SettingsPages }>();
   const [postTypeFilter, setPostTypeFilter] = useState<PostType>();
   const [composerState, setComposerState] = useState<{
     postType: PostType;
@@ -194,7 +195,8 @@ export function AppShell() {
         displayName={profile.displayName}
         userId={userId}
         onInvite={registrationBot ? () => setInviteOpen(true) : undefined}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => setSettingsOpen({})}
+        onOpenSecurity={() => setSettingsOpen({ page: SettingsPages.DevicesPage })}
         onClose={() => setAccountMenuOpen(false)}
       />
     </div>
@@ -255,8 +257,11 @@ export function AppShell() {
       )}
 
       {settingsOpen && (
-        <Modal500 requestClose={() => setSettingsOpen(false)}>
-          <Settings requestClose={() => setSettingsOpen(false)} />
+        <Modal500 requestClose={() => setSettingsOpen(undefined)}>
+          <Settings
+            initialPage={settingsOpen.page}
+            requestClose={() => setSettingsOpen(undefined)}
+          />
         </Modal500>
       )}
 
