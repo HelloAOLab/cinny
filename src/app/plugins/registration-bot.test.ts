@@ -1,87 +1,65 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { MatrixClient } from 'matrix-js-sdk';
 import {
-  EVENT_REGISTRATION_CLIENTS,
-  EVENT_REGISTRATION_LINK_GENERATED,
-  REGISTRATION_REL_TYPE,
-  buildRegistrationClientsRequestContent,
-  buildRegistrationLinkRequestContent,
-  isRegistrationClientsResponseTo,
-  isRegistrationLinkResponseTo,
+  buildRegistrationClientsUrl,
+  buildRegistrationLinkRequestBody,
+  buildRegistrationLinkUrl,
+  isOpenIdTokenFresh,
   parseRegistrationClientsResponse,
   parseRegistrationLinkResponse,
+  requestRegistrationClients,
+  requestRegistrationLink,
 } from './registration-bot';
 
-describe('buildRegistrationLinkRequestContent', () => {
-  it('includes only homeserver_id when nothing else is given', () => {
-    expect(buildRegistrationLinkRequestContent({ homeserverId: 'prod' })).toEqual({
-      homeserver_id: 'prod',
-    });
+describe('buildRegistrationLinkUrl', () => {
+  it('appends the route to the API base URL', () => {
+    expect(buildRegistrationLinkUrl('https://bot.example.org')).toBe(
+      'https://bot.example.org/api/registration-link'
+    );
   });
 
-  it('includes client_id and request_id when given', () => {
-    expect(
-      buildRegistrationLinkRequestContent({
-        homeserverId: 'prod',
-        clientId: 'web',
-        requestId: 'abc',
-      })
-    ).toEqual({
-      homeserver_id: 'prod',
-      client_id: 'web',
-      request_id: 'abc',
-    });
+  it('does not double up a trailing slash', () => {
+    expect(buildRegistrationLinkUrl('https://bot.example.org/')).toBe(
+      'https://bot.example.org/api/registration-link'
+    );
   });
 });
 
-describe('isRegistrationLinkResponseTo', () => {
-  const requestEventId = '$request:example.org';
-
-  it('matches a response event relating to the request via m.relates_to', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: requestEventId },
-    };
-    expect(
-      isRegistrationLinkResponseTo(EVENT_REGISTRATION_LINK_GENERATED, content, requestEventId)
-    ).toBe(true);
+describe('buildRegistrationClientsUrl', () => {
+  it('has no query when no client is given', () => {
+    expect(buildRegistrationClientsUrl('https://bot.example.org')).toBe(
+      'https://bot.example.org/api/clients'
+    );
   });
 
-  it('rejects events of the wrong type', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: requestEventId },
-    };
-    expect(isRegistrationLinkResponseTo('m.room.message', content, requestEventId)).toBe(false);
+  it('encodes client_id into the query', () => {
+    expect(buildRegistrationClientsUrl('https://bot.example.org/', 'a b&c')).toBe(
+      'https://bot.example.org/api/clients?client_id=a%20b%26c'
+    );
+  });
+});
+
+describe('buildRegistrationLinkRequestBody', () => {
+  it('is empty when no client is given', () => {
+    expect(buildRegistrationLinkRequestBody({})).toEqual({});
   });
 
-  it('rejects a response relating to a different request', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: '$other:example.org' },
-    };
-    expect(
-      isRegistrationLinkResponseTo(EVENT_REGISTRATION_LINK_GENERATED, content, requestEventId)
-    ).toBe(false);
+  it('includes client_id when given', () => {
+    expect(buildRegistrationLinkRequestBody({ clientId: 'web' })).toEqual({ client_id: 'web' });
+  });
+});
+
+describe('isOpenIdTokenFresh', () => {
+  it('is false with no cached token', () => {
+    expect(isOpenIdTokenFresh(undefined, 0)).toBe(false);
   });
 
-  it('rejects a response with the wrong rel_type', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: 'm.reference', event_id: requestEventId },
-    };
-    expect(
-      isRegistrationLinkResponseTo(EVENT_REGISTRATION_LINK_GENERATED, content, requestEventId)
-    ).toBe(false);
+  it('is true well before expiry', () => {
+    expect(isOpenIdTokenFresh({ accessToken: 't', expiresAt: 3600000 }, 0)).toBe(true);
   });
 
-  it('rejects a response missing m.relates_to entirely', () => {
-    expect(
-      isRegistrationLinkResponseTo(
-        EVENT_REGISTRATION_LINK_GENERATED,
-        { success: true },
-        requestEventId
-      )
-    ).toBe(false);
+  it('is false within the last minute before expiry', () => {
+    expect(isOpenIdTokenFresh({ accessToken: 't', expiresAt: 3600000 }, 3550000)).toBe(false);
   });
 });
 
@@ -106,11 +84,11 @@ describe('parseRegistrationLinkResponse', () => {
     expect(
       parseRegistrationLinkResponse({
         success: false,
-        error: { code: 'conflict', message: "server 'prod' has no clients configured" },
+        error: { code: 'quota_exceeded', message: 'too many links' },
       })
     ).toEqual({
       success: false,
-      error: { code: 'conflict', message: "server 'prod' has no clients configured" },
+      error: { code: 'quota_exceeded', message: 'too many links' },
     });
   });
 
@@ -127,75 +105,12 @@ describe('parseRegistrationLinkResponse', () => {
       error: { code: undefined, message: 'The registration bot could not create a link.' },
     });
   });
-});
 
-describe('buildRegistrationClientsRequestContent', () => {
-  it('includes only homeserver_id when nothing else is given', () => {
-    expect(buildRegistrationClientsRequestContent({ homeserverId: 'prod' })).toEqual({
-      homeserver_id: 'prod',
+  it('treats a non-object body as a failure', () => {
+    expect(parseRegistrationLinkResponse(undefined)).toEqual({
+      success: false,
+      error: { code: undefined, message: 'The registration bot could not create a link.' },
     });
-  });
-
-  it('includes client_id and request_id when given', () => {
-    expect(
-      buildRegistrationClientsRequestContent({
-        homeserverId: 'prod',
-        clientId: 'web',
-        requestId: 'abc',
-      })
-    ).toEqual({
-      homeserver_id: 'prod',
-      client_id: 'web',
-      request_id: 'abc',
-    });
-  });
-});
-
-describe('isRegistrationClientsResponseTo', () => {
-  const requestEventId = '$request:example.org';
-
-  it('matches a response event relating to the request via m.relates_to', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: requestEventId },
-    };
-    expect(
-      isRegistrationClientsResponseTo(EVENT_REGISTRATION_CLIENTS, content, requestEventId)
-    ).toBe(true);
-  });
-
-  it('rejects events of the wrong type', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: requestEventId },
-    };
-    expect(isRegistrationClientsResponseTo('m.room.message', content, requestEventId)).toBe(false);
-  });
-
-  it('rejects a response relating to a different request', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: REGISTRATION_REL_TYPE, event_id: '$other:example.org' },
-    };
-    expect(
-      isRegistrationClientsResponseTo(EVENT_REGISTRATION_CLIENTS, content, requestEventId)
-    ).toBe(false);
-  });
-
-  it('rejects a response with the wrong rel_type', () => {
-    const content = {
-      success: true,
-      'm.relates_to': { rel_type: 'm.reference', event_id: requestEventId },
-    };
-    expect(
-      isRegistrationClientsResponseTo(EVENT_REGISTRATION_CLIENTS, content, requestEventId)
-    ).toBe(false);
-  });
-
-  it('rejects a response missing m.relates_to entirely', () => {
-    expect(
-      isRegistrationClientsResponseTo(EVENT_REGISTRATION_CLIENTS, { success: true }, requestEventId)
-    ).toBe(false);
   });
 });
 
@@ -253,6 +168,122 @@ describe('parseRegistrationClientsResponse', () => {
     ).toEqual({
       success: false,
       error: { code: undefined, message: 'The registration bot could not list clients.' },
+    });
+  });
+});
+
+describe('requesting over HTTP', () => {
+  const botConfig = { apiUrl: 'https://bot.example.org' };
+
+  const fakeClient = (...tokens: string[]) => {
+    const getOpenIdToken = vi.fn();
+    tokens.forEach((token) =>
+      getOpenIdToken.mockResolvedValueOnce({
+        access_token: token,
+        token_type: 'Bearer',
+        matrix_server_name: 'example.org',
+        expires_in: 3600,
+      })
+    );
+    return { mx: { getOpenIdToken } as unknown as MatrixClient, getOpenIdToken };
+  };
+
+  const jsonResponse = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('mints a link with the OpenID access token as a bearer token', async () => {
+    const { mx } = fakeClient('openid-1');
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, {
+        success: true,
+        link: 'https://app.example.org/?register_token=t',
+        token: 't',
+        client_id: 'web',
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(requestRegistrationLink(mx, botConfig, 'web')).resolves.toEqual({
+      success: true,
+      link: 'https://app.example.org/?register_token=t',
+      token: 't',
+      clientId: 'web',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://bot.example.org/api/registration-link');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer openid-1');
+    expect(JSON.parse(init.body)).toEqual({ client_id: 'web' });
+  });
+
+  it('reuses a fresh OpenID token across requests', async () => {
+    const { mx, getOpenIdToken } = fakeClient('openid-1');
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(200, { success: true, clients: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await requestRegistrationClients(mx, botConfig);
+    await requestRegistrationClients(mx, botConfig);
+
+    expect(getOpenIdToken).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://bot.example.org/api/clients');
+  });
+
+  it('retries once with a new token after a 401', async () => {
+    const { mx, getOpenIdToken } = fakeClient('stale', 'fresh');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(401, {
+          success: false,
+          error: { code: 'unauthorized', message: 'the token is not valid' },
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse(200, { success: true, clients: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(requestRegistrationClients(mx, botConfig)).resolves.toEqual({
+      success: true,
+      clients: [],
+    });
+    expect(getOpenIdToken).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh');
+  });
+
+  it("surfaces the bot's refusal", async () => {
+    const { mx } = fakeClient('openid-1');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(403, {
+          success: false,
+          error: { code: 'quota_exceeded', message: 'too many links' },
+        })
+      )
+    );
+
+    await expect(requestRegistrationLink(mx, botConfig)).resolves.toEqual({
+      success: false,
+      error: { code: 'quota_exceeded', message: 'too many links' },
+    });
+  });
+
+  it('treats a non-JSON answer as a failure', async () => {
+    const { mx } = fakeClient('openid-1');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('Bad Gateway', { status: 502 })));
+
+    await expect(requestRegistrationLink(mx, botConfig)).resolves.toEqual({
+      success: false,
+      error: { code: undefined, message: 'The registration bot could not create a link.' },
     });
   });
 });

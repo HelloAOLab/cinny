@@ -20,8 +20,7 @@ export type ClientConfig = {
   hashRouter?: HashRouterConfig;
 
   registrationBot?: {
-    userId: string;
-    homeserverId: string;
+    apiUrl: string;
     clientId?: string;
   };
 };
