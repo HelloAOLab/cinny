@@ -17,6 +17,7 @@ import {
 import { getHomePath, getLoginPath, withSearchParam } from '../../pathUtils';
 import { getMxIdLocalPart, getMxIdServer } from '../../../utils/matrix';
 import { setFallbackSession } from '../../../state/sessions';
+import { markNewAccountForCrossSigning } from '../../../utils/newAccountCrossSigning';
 
 export enum RegisterError {
   UserTaken = 'UserTaken',
@@ -33,6 +34,8 @@ export enum RegisterError {
 export type CustomRegisterResponse = {
   baseUrl: string;
   response: RegisterResponse;
+  /** Kept (in memory only) to authorize setting up cross-signing after registering. */
+  password?: string;
 };
 export type RegisterResult = [IAuthData, undefined] | [undefined, CustomRegisterResponse];
 export const register = async (
@@ -103,6 +106,7 @@ export const register = async (
     {
       baseUrl: mx.baseUrl,
       response: res,
+      password: requestData.password,
     },
   ];
 };
@@ -112,11 +116,14 @@ export const useRegisterComplete = (data?: CustomRegisterResponse) => {
 
   useEffect(() => {
     if (data) {
-      const { response, baseUrl } = data;
+      const { response, baseUrl, password } = data;
 
       const userId = response.user_id;
       const accessToken = response.access_token;
       const deviceId = response.device_id;
+
+      // Also when we're sent to login instead: the account is still new.
+      markNewAccountForCrossSigning(userId, password);
 
       if (accessToken && deviceId) {
         setFallbackSession(accessToken, deviceId, userId, baseUrl);

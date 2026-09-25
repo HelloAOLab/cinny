@@ -9,6 +9,7 @@ import { getAppLoginPath, getAppPath, withSearchParam } from '../../pathUtils';
 import { LoginPathSearchParams } from '../../paths';
 import { getMxIdLocalPart, getMxIdServer } from '../../../utils/matrix';
 import { setFallbackSession } from '../../../state/sessions';
+import { markNewAccountForCrossSigning } from '../../../utils/newAccountCrossSigning';
 
 /**
  * Forked from registerUtil.ts's useRegisterComplete: identical auto-session
@@ -20,11 +21,14 @@ export const useAppRegisterComplete = (data?: CustomRegisterResponse) => {
 
   useEffect(() => {
     if (data) {
-      const { response, baseUrl } = data;
+      const { response, baseUrl, password } = data;
 
       const userId = response.user_id;
       const accessToken = response.access_token;
       const deviceId = response.device_id;
+
+      // Also when we're sent to login instead: the account is still new.
+      markNewAccountForCrossSigning(userId, password);
 
       if (accessToken && deviceId) {
         setFallbackSession(accessToken, deviceId, userId, baseUrl);
