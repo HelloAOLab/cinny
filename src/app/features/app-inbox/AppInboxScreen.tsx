@@ -2,17 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAtomValue } from 'jotai';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
-import { useRoomNavigate } from '../../hooks/useRoomNavigate';
-import { useSpaces } from '../../state/hooks/roomList';
-import { allRoomsAtom } from '../../state/room-list/roomList';
 import { allInvitesAtom } from '../../state/room-list/inviteList';
-import { roomToParentsAtom } from '../../state/room/roomToParents';
 import { getCanonicalAliasOrRoomId } from '../../utils/matrix';
-import { useCommunityOptionally } from '../../pages/app-shell/CommunityContext';
-import { getAppCommunityChatRoomPath, getAppCommunityPath } from '../../pages/pathUtils';
+import { getAppCommunityPath } from '../../pages/pathUtils';
 import { Invites, Notifications } from '../../pages/client/inbox';
-import { isPostsRoomName } from '../app-feed/findPostsRoom';
-import { getAppRoomTarget } from './appRoomTarget';
+import { useAppRoomNavigate } from './useAppRoomNavigate';
 import * as css from './AppInbox.css';
 
 type InboxTab = 'notifications' | 'invites';
@@ -25,41 +19,9 @@ type InboxTab = 'notifications' | 'invites';
 export function AppInboxScreen() {
   const mx = useMatrixClient();
   const navigate = useNavigate();
-  const { navigateRoom } = useRoomNavigate();
-  const community = useCommunityOptionally();
-  const communityIds = useSpaces(mx, allRoomsAtom);
-  const roomToParents = useAtomValue(roomToParentsAtom);
   const inviteCount = useAtomValue(allInvitesAtom).length;
   const [tab, setTab] = useState<InboxTab>('notifications');
-
-  const openRoom = useCallback(
-    (roomId: string, eventId?: string) => {
-      const target = getAppRoomTarget(
-        roomId,
-        communityIds,
-        roomToParents,
-        (id) => isPostsRoomName(mx.getRoom(id)?.name),
-        community?.roomId
-      );
-      if (!target) {
-        // The shell has no view for rooms outside a community (e.g. DMs).
-        navigateRoom(roomId, eventId);
-        return;
-      }
-      const communityIdOrAlias = getCanonicalAliasOrRoomId(mx, target.communityId);
-      if (target.kind === 'feed') {
-        navigate(getAppCommunityPath(communityIdOrAlias));
-        return;
-      }
-      navigate(
-        getAppCommunityChatRoomPath(
-          communityIdOrAlias,
-          getCanonicalAliasOrRoomId(mx, target.roomId)
-        )
-      );
-    },
-    [mx, navigate, navigateRoom, communityIds, roomToParents, community]
-  );
+  const openRoom = useAppRoomNavigate();
 
   const handleInviteAccepted = useCallback(
     (roomId: string, space: boolean) => {

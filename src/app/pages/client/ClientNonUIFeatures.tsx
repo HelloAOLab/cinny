@@ -14,7 +14,7 @@ import { settingsAtom } from '../../state/settings';
 import { allInvitesAtom } from '../../state/room-list/inviteList';
 import { usePreviousValue } from '../../hooks/usePreviousValue';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
-import { getInboxInvitesPath, getInboxNotificationsPath } from '../pathUtils';
+import { getInboxInvitesPath } from '../pathUtils';
 import {
   getMemberDisplayName,
   getNotificationType,
@@ -26,6 +26,9 @@ import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { useSelectedRoom } from '../../hooks/router/useSelectedRoom';
 import { useInboxNotificationsSelected } from '../../hooks/router/useInbox';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { useAppRoomNavigate } from '../../features/app-inbox/useAppRoomNavigate';
+import { isPostsRoomName } from '../../features/app-feed/findPostsRoom';
+import { getMessageNotificationBody } from '../../features/app-inbox/notificationBody';
 
 function SystemEmojiFeature() {
   const [twitterEmoji] = useSetting(settingsAtom, 'twitterEmoji');
@@ -137,31 +140,43 @@ function MessageNotifications() {
   const [showNotifications] = useSetting(settingsAtom, 'showNotifications');
   const [notificationSound] = useSetting(settingsAtom, 'isNotificationSounds');
 
-  const navigate = useNavigate();
+  const openRoom = useAppRoomNavigate();
   const notificationSelected = useInboxNotificationsSelected();
   const selectedRoomId = useSelectedRoom();
+
+  // Kept in a ref so a notification that's already showing opens the room
+  // with the latest room/community state when clicked.
+  const openRoomRef = useRef(openRoom);
+  openRoomRef.current = openRoom;
 
   const notify = useCallback(
     ({
       roomName,
       roomAvatar,
-      username,
+      body,
+      roomId,
+      eventId,
     }: {
       roomName: string;
       roomAvatar?: string;
-      username: string;
+      body: string;
       roomId: string;
       eventId: string;
     }) => {
       const noti = new window.Notification(roomName, {
         icon: roomAvatar,
         badge: roomAvatar,
-        body: `New inbox notification from ${username}`,
+        body,
         silent: true,
       });
 
       noti.onclick = () => {
-        if (!window.closed) navigate(getInboxNotificationsPath());
+        if (!window.closed) {
+          window.focus();
+          // Jump straight to the event: the post (or comment) in the
+          // community feed, or the message in the chat room.
+          openRoomRef.current(roomId, eventId);
+        }
         noti.close();
         notifRef.current = undefined;
       };
@@ -169,7 +184,7 @@ function MessageNotifications() {
       notifRef.current?.close();
       notifRef.current = noti;
     },
-    [navigate]
+    []
   );
 
   const playSound = useCallback(() => {
@@ -215,12 +230,17 @@ function MessageNotifications() {
       if (showNotifications && notificationPermission('granted')) {
         const avatarMxc =
           room.getAvatarFallbackMember()?.getMxcAvatarUrl() ?? room.getMxcAvatarUrl();
+        const username = getMemberDisplayName(room, sender) ?? getMxIdLocalPart(sender) ?? sender;
+        const body = getMessageNotificationBody(username, {
+          mentioned: !!mx.getPushActionsForEvent(mEvent)?.tweaks?.highlight,
+          inPostsRoom: isPostsRoomName(room.name),
+        });
         notify({
           roomName: room.name ?? 'Unknown',
           roomAvatar: avatarMxc
             ? mxcUrlToHttp(mx, avatarMxc, useAuthentication, 96, 96, 'crop') ?? undefined
             : undefined,
-          username: getMemberDisplayName(room, sender) ?? getMxIdLocalPart(sender) ?? sender,
+          body,
           roomId: room.roomId,
           eventId,
         });
