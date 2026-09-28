@@ -68,8 +68,10 @@ export const OptionsButton = style({
 });
 
 export const CoverImage = style({
-  height: '250px',
+  width: '100%',
+  maxHeight: '480px',
   position: 'relative',
+  overflow: 'hidden',
   background: '#eef2f5',
 });
 
