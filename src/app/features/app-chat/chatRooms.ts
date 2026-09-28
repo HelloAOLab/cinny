@@ -83,3 +83,74 @@ export const getUnjoinedChatRooms = (
       via: viaMap.get(room.room_id) ?? [],
     }));
 };
+
+export type RoomReplacement = {
+  /** The room that replaced this one (m.room.tombstone `replacement_room`). */
+  roomId: string;
+  /** Servers to try when joining the replacement room. */
+  via: string[];
+};
+
+export type ResolvedChatRoom =
+  | {
+      /** A joined room at the end of its replacement chain. */
+      kind: 'joined';
+      roomId: string;
+      /** Rooms in the list that were replaced by this one (oldest first). */
+      predecessorIds: string[];
+    }
+  | {
+      /** A replacement room the user hasn't joined yet. */
+      kind: 'unjoined';
+      roomId: string;
+      via: string[];
+      /** The newest room in the chain the user is still in; used for its name and avatar. */
+      latestJoinedId: string;
+      predecessorIds: string[];
+    };
+
+/**
+ * Swaps every replaced (tombstoned) room in `roomIds` for the newest room in
+ * its replacement chain, keeping the original order and dropping duplicates
+ * (e.g. when both an old room and its replacement are in the list). If the
+ * newest room hasn't been joined yet it is returned as `unjoined` so the
+ * list can offer to join it instead of showing the dead room.
+ */
+export const resolveReplacedRooms = (
+  roomIds: string[],
+  getReplacement: (roomId: string) => RoomReplacement | undefined,
+  isJoined: (roomId: string) => boolean
+): ResolvedChatRoom[] => {
+  const resolved = new Map<string, ResolvedChatRoom>();
+
+  roomIds.forEach((startId) => {
+    const chain = [startId];
+    let via: string[] = [];
+    let latestJoinedId = startId;
+    let replacement = getReplacement(startId);
+    while (replacement && !chain.includes(replacement.roomId)) {
+      chain.push(replacement.roomId);
+      via = replacement.via;
+      if (isJoined(replacement.roomId)) latestJoinedId = replacement.roomId;
+      replacement = getReplacement(replacement.roomId);
+    }
+
+    const roomId = chain[chain.length - 1];
+    const predecessorIds = chain.slice(0, -1);
+    const existing = resolved.get(roomId);
+    if (existing) {
+      predecessorIds.forEach((id) => {
+        if (!existing.predecessorIds.includes(id)) existing.predecessorIds.push(id);
+      });
+      return;
+    }
+    resolved.set(
+      roomId,
+      isJoined(roomId)
+        ? { kind: 'joined', roomId, predecessorIds }
+        : { kind: 'unjoined', roomId, via, latestJoinedId, predecessorIds }
+    );
+  });
+
+  return Array.from(resolved.values());
+};
