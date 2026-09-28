@@ -22,13 +22,18 @@ import { nameInitials } from '../../utils/common';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { relativeTime } from '../../utils/time';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
-import { MImage, ImageContent } from '../../components/message';
+import { ImageContent, MText, RenderBody } from '../../components/message';
 import { Image } from '../../components/media';
 import { ImageViewer } from '../../components/image-viewer';
 import { GetContentCallback, MessageEvent } from '../../../types/matrix/room';
-import { IImageContent } from '../../../types/matrix/common';
+import {
+  IImageContent,
+  MATRIX_SPOILER_PROPERTY_NAME,
+  MATRIX_SPOILER_REASON_PROPERTY_NAME,
+} from '../../../types/matrix/common';
 import { AMEN_REACTION_KEY, summarizePostReactions } from './postReactions';
 import { canRemovePost } from './postOptions';
+import { getPostImageAspectRatio, hasImageCaption } from './postImage';
 import { AppPostOptionsMenu } from './AppPostOptionsMenu';
 import * as css from './AppPostCard.css';
 
@@ -119,6 +124,9 @@ export function AppPostCard({ room, event, community, focused, onOpenComments }:
   const msgType = typeof content.msgtype === 'string' ? content.msgtype : undefined;
   const getContent = useCallback(() => content, [content]) as GetContentCallback;
   const isImagePost = msgType === MsgType.Image;
+  const imageContent = content as IImageContent;
+  const imageUrl = imageContent.file?.url ?? imageContent.url;
+  const showImageCaption = isImagePost && hasImageCaption(content);
 
   const eventId = event.getId();
   const reactionRelations = eventId
@@ -197,16 +205,35 @@ export function AppPostCard({ room, event, community, focused, onOpenComments }:
         )}
       </div>
 
-      {isImagePost && (
-        <div className={css.CoverImage}>
-          <MImage
-            content={content as IImageContent}
-            renderImageContent={(props) => (
-              <ImageContent
-                {...props}
-                autoPlay
-                renderImage={(p) => <Image {...p} loading="lazy" />}
-                renderViewer={(p) => <ImageViewer {...p} />}
+      {isImagePost && typeof imageUrl === 'string' && (
+        <div
+          className={css.CoverImage}
+          style={{ aspectRatio: getPostImageAspectRatio(imageContent.info) }}
+        >
+          <ImageContent
+            body={imageContent.body || 'Image'}
+            info={imageContent.info}
+            mimeType={imageContent.info?.mimetype}
+            url={imageUrl}
+            encInfo={imageContent.file}
+            markedAsSpoiler={imageContent[MATRIX_SPOILER_PROPERTY_NAME]}
+            spoilerReason={imageContent[MATRIX_SPOILER_REASON_PROPERTY_NAME]}
+            autoPlay
+            renderImage={(p) => <Image {...p} loading="lazy" />}
+            renderViewer={(p) => <ImageViewer {...p} />}
+          />
+        </div>
+      )}
+
+      {showImageCaption && (
+        <div className={css.Body}>
+          <MText
+            content={content}
+            renderBody={(p) => (
+              <RenderBody
+                {...p}
+                htmlReactParserOptions={htmlReactParserOptions}
+                linkifyOpts={linkifyOpts}
               />
             )}
           />
