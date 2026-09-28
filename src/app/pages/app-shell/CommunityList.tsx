@@ -6,6 +6,7 @@ import { AsyncStatus, useAsyncCallback } from '../../hooks/useAsyncCallback';
 import { getMemberDisplayName, getRoomAvatarUrl } from '../../utils/room';
 import { getMxIdLocalPart } from '../../utils/matrix';
 import { nameInitials } from '../../utils/common';
+import { joinSpaceRooms } from '../../utils/joinSpaceRooms';
 import { PlusIcon } from './AppIcons';
 import * as css from './CommunitiesDrawer.css';
 
@@ -70,6 +71,8 @@ function CommunityInviteRow({ room, onJoined }: CommunityInviteRowProps) {
   const [joinState, join] = useAsyncCallback<void, MatrixError, []>(
     useCallback(async () => {
       await mx.joinRoom(room.roomId);
+      // Join the community's rooms in the background; don't hold up navigation.
+      joinSpaceRooms(mx, room.roomId);
       onJoined(room.roomId);
     }, [mx, room, onJoined])
   );
