@@ -67,6 +67,7 @@ import { useIgnoredUsers } from '../../../hooks/useIgnoredUsers';
 import { useReportRoomSupported } from '../../../hooks/useReportRoomSupported';
 import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
+import { joinSpaceRooms } from '../../../utils/joinSpaceRooms';
 
 const COMPACT_CARD_WIDTH = 548;
 
@@ -175,6 +176,10 @@ function InviteCard({
       await mx.joinRoom(invite.roomId);
       if (dmUserId) {
         await addRoomIdToMDirect(mx, invite.roomId, dmUserId);
+      }
+      if (invite.isSpace) {
+        // Join the space's rooms in the background; don't hold up navigation.
+        joinSpaceRooms(mx, invite.roomId);
       }
       onNavigate(invite.roomId, invite.isSpace);
     }, [mx, invite, userId, onNavigate])
